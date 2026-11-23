@@ -43,6 +43,16 @@ describe('parseInlineChecks', () => {
   test('finds several checks', () => {
     expect(parseInlineChecks('@Check[a|dc:1] or @Check[b|dc:2]')).toHaveLength(2);
   });
+  test('misnamed skills are corrected; an /act without a DC is not a check', () => {
+    const checks = parseInlineChecks(
+      '@Check[occult|dc:38] or @Check[engineering|dc:20]{Engineering Lore}, or @Check[athletics|dc:44] to [[/act force-open]] the gate',
+    );
+    expect(checks.map((c) => [c.skill, c.dc])).toEqual([
+      ['occultism', 38],
+      ['engineering-lore', 20],
+      ['athletics', 44],
+    ]);
+  });
 });
 
 describe('parseCounteracts', () => {

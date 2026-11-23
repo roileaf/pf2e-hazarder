@@ -2,8 +2,10 @@ import { MODULE_ID, OUTCOME_TO_DEGREE, RANKS, STATUS } from '../constants.js';
 import { getSystemFlags } from '../systemCompat.js';
 import * as Engine from './RulesEngine.js';
 import { extractCheck, matchCheck } from './RollMatcher.js';
+import { skillLabel } from '../ui/trackerView.js';
 
-const CHECK_TYPES = new Set(['skill-check', 'perception-check']);
+// Saving throws count too: a few hazards are disabled with one ("@Check[will|dc:28] to refuse to listen").
+export const CHECK_TYPES = new Set(['skill-check', 'perception-check', 'saving-throw']);
 
 export function defaultCandidates(store) {
   const seen = new Map();
@@ -140,12 +142,14 @@ export class HazardRunner {
   #warnRank(events, plan, r) {
     const e = events.find((ev) => ev.reason === 'rank-too-low');
     if (!e) return;
-    const disable = plan.components.flatMap((c) => c.disables).find((d) => d.id === e.disableId);
+    const disable = plan.components
+      .find((c) => c.id === e.instanceKey.split(':')[0])
+      ?.disables.find((d) => d.id === e.disableId);
     this.ui.warn?.(
       game.i18n.format('PF2E_HAZARDER.Tracker.RankTooLow', {
         actor: r.actorName ?? '?',
         rank: game.i18n.localize(`PF2E_HAZARDER.Rank.${RANKS[e.minRank]}`),
-        skill: disable?.label ?? disable?.skill ?? '',
+        skill: disable ? skillLabel(disable.skill) : '',
       }),
     );
   }

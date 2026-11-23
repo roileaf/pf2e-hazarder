@@ -113,17 +113,143 @@ function parseSharedSuccesses(text) {
   return null;
 }
 
+const SAVES = new Set(['fortitude', 'reflex', 'will']);
+// Blanks tags without moving anything, so check offsets stay valid.
+const flatten = (raw) =>
+  raw.replace(/<[^>]+>/g, (m) => ' '.repeat(m.length)).replace(/&nbsp;/g, '      ');
+
+// A save in the disable text is usually a consequence ("must succeed at a @Check[will] save",
+// "damage (@Check[reflex|basic])"), not a way to disable; flat checks never are.
+function isDisableOption(flat, c) {
+  if (c.skill === 'flat') return false;
+  if (!SAVES.has(c.skill)) return true;
+  if (c.basic || /inflicts/.test(c.options)) return false;
+  const before = flat.slice(Math.max(0, c.index - 40), c.index);
+  return !/(?:[([]|\b(?:succeeds?\s+at|attempt|make)\s+an?)\s*$/i.test(before);
+}
+
+// Disable text with no inline checks at all: "Survival (trained) or Thievery (expert) DC 20".
+const PLAIN_SKILL =
+  '(?:acrobatics|arcana|athletics|crafting|deception|diplomacy|intimidation|medicine|nature|occultism|performance|religion|society|stealth|survival|thievery|perception|[a-z]+ lore)';
+const PLAIN_LIST_RE = new RegExp(
+  `((?:\\b${PLAIN_SKILL}\\b(?:\\s*\\(\\s*\\w+\\s*\\))?(?:\\s*,\\s*(?:or\\s+)?|\\s+or\\s+)?)+)\\s*DC\\s*(\\d+)`,
+  'gi',
+);
+function parsePlainChecks(text) {
+  const out = [];
+  for (const m of text.matchAll(PLAIN_LIST_RE)) {
+    for (const s of m[1].matchAll(new RegExp(`\\b${PLAIN_SKILL}\\b`, 'gi'))) {
+      const index = m.index + s.index;
+      out.push({
+        skill: s[0].toLowerCase().replace(/\s+/g, '-'),
+        dc: Number(m[2]),
+        label: s[0],
+        traits: [],
+        index,
+        end: index + s[0].length,
+      });
+    }
+  }
+  return out;
+}
+
+// A stated number of successes with no "any combination" wording: "three successes are required
+// to disable the haunt", "(requires two successes)", "it takes four successful checks",
+// "two total successes using either skill disables the hazard".
+const REQUIRED_PATTERNS = [
+  `\\b(${NUM})\\s+(?:total\\s+)?(?:success(?:es)?|successful\\s+checks|checks)\\s+(?:in\\s+all\\s+|across\\s+all\\s+skills\\s+|total\\s+)?(?:(?:are|is|area)\\s+)?(?:required|needed|necessary)\\b`,
+  `\\brequir(?:es|e|ing)\\s+(${NUM})\\s+(?:total\\s+)?(?:success(?:es)?|successful\\s+checks)\\b`,
+  `\\bit\\s+takes\\s+(${NUM})\\s+successful\\s+checks\\b`,
+  `\\b(${NUM})\\s+(?:total\\s+)?successes\\b[^.;]{0,60}?\\b(?:disables?|deactivates?|destroys?)\\s`,
+  `\\b(${NUM})\\s+successes\\s+total\\b`,
+];
+const NOT_A_REQUIREMENT_RE = /\b(?:counts?\s+as|earns?|first|after|up\s+to|final)\s+$/i;
+const TIMES_BEFORE_RE = new RegExp(`\\b(?:twice|(${NUM})\\s+times)\\s+to\\s+$`, 'i');
+const COUNT_BEFORE_RE = new RegExp(`\\b(${NUM})\\s+(?:successful\\s+)?$`, 'i');
+
+/**
+ * Who a stated success count applies to. One option → that option needs N. Every option → they
+ * share one total of N. Some of several options → each needs N (a guess, flagged for review).
+ */
+function successRequirements(flat, checks, joined) {
+  const found = [];
+  const forward = (i) => {
+    const group = [i];
+    while (group.at(-1) < checks.length - 1 && joined(group.at(-1))) group.push(group.at(-1) + 1);
+    return group;
+  };
+  const backward = (i) => {
+    const group = [i];
+    while (group[0] > 0 && joined(group[0] - 1)) group.unshift(group[0] - 1);
+    return group;
+  };
+  const all = checks.map((_, i) => i);
+
+  // "Three @Check[…] or @Check[…] checks to mend the rift".
+  checks.forEach((c, i) => {
+    if (i > 0 && checks[i - 1].index === c.index) return;
+    const before = flat.slice(i > 0 ? checks[i - 1].end : 0, c.index);
+    const m = COUNT_BEFORE_RE.exec(before);
+    if (m && !NOT_A_REQUIREMENT_RE.test(before.slice(0, m.index))) {
+      found.push({ n: toNum(m[1]), group: forward(i) });
+    }
+    // "DC 33 Athletics twice to [[/act force-open dc=33]]".
+    const times = TIMES_BEFORE_RE.exec(before);
+    if (times) found.push({ n: times[1] ? toNum(times[1]) : 2, group: [i] });
+  });
+
+  const seen = new Set();
+  for (const pattern of REQUIRED_PATTERNS) {
+    for (const m of flat.matchAll(new RegExp(pattern, 'gi'))) {
+      const at = m.index + m[0].indexOf(m[1]);
+      if (seen.has(at) || NOT_A_REQUIREMENT_RE.test(flat.slice(0, at))) continue;
+      seen.add(at);
+      // In brackets it speaks for the option(s) it follows; otherwise for the whole hazard.
+      const before = flat.slice(0, m.index);
+      const inBrackets = before.split('(').length > before.split(')').length;
+      const prev = checks.findLastIndex((c) => c.end <= m.index);
+      found.push({ n: toNum(m[1]), group: inBrackets && prev !== -1 ? backward(prev) : all });
+    }
+  }
+  return found;
+}
+
 // Routine text opens with "(N actions; traits)", "(six actions)", "(two-actions)", "Routine (N actions)",
-// "N Action:" or just a bare icon digit ("3 For each of its actions...").
-function parseActionsPerTurn(text) {
+// "N Action:", an action glyph, or just a bare icon digit ("3 For each of its actions...").
+// Failing that: "(1 to 3 actions)" (the most it can have), a titled "(1 action)", or "uses its 3 actions".
+const GLYPH_ACTIONS = { a: 1, d: 2, t: 3, 1: 1, 2: 2, 3: 3 };
+const GLYPH_RE =
+  /^\s*(?:<p[^>]*>\s*)?<span class="(?:action-glyph|pf2-icon)">\s*([adt123])\s*<\/span>/i;
+const USES_RE = new RegExp(`\\buses?\\s+(?:its\\s+|up\\s+to\\s+)?(${NUM})\\s+actions?\\b`, 'i');
+function parseActionsPerTurn(text, rawHtml = '') {
+  const glyph = GLYPH_RE.exec(rawHtml);
+  if (glyph) return GLYPH_ACTIONS[glyph[1].toLowerCase()];
   const patterns = [
     new RegExp(`^\\s*(?:routine\\s*)?\\(\\s*(${NUM})[\\s-]+actions?\\s*[);,]`, 'i'),
     /^\s*(\d)\s+actions?\s*:/i,
     /^\s*([1-9])\s+(?=[A-Za-z])/,
+    new RegExp(`^\\s*\\(\\s*(?:${NUM})\\s+(?:to|or)\\s+(${NUM})\\s+actions?\\b`, 'i'),
+    new RegExp(
+      `^\\s*(?:[A-Z][\\w'’]*\\s+|(?:the|of|a|an|through)\\s+){1,8}\\(\\s*(${NUM})[\\s-]+actions?\\s*[);,]`,
+    ),
   ];
   for (const re of patterns) {
     const m = re.exec(text);
     if (m) return toNum(m[1]);
+  }
+  // "The keystone uses its 3 actions to…" — but not "each tendril uses 1 action".
+  const head = text.slice(0, 240);
+  const uses = USES_RE.exec(head);
+  if (
+    uses &&
+    !/\beach\b/i.test(
+      head
+        .slice(0, uses.index)
+        .split(/[.,;:]/)
+        .pop(),
+    )
+  ) {
+    return toNum(uses[1]);
   }
   return null;
 }
@@ -148,7 +274,7 @@ export function draftPlan(source) {
     const routineText = stripHtml(details.routine);
     const rawDisable = String(details.disable ?? '');
 
-    const apt = parseActionsPerTurn(routineText);
+    const apt = parseActionsPerTurn(routineText, String(details.routine ?? ''));
     if (details.isComplex) {
       if (apt) plan.actionsPerTurn = apt;
       // No routine text at all (the hazard only reacts): nothing to find, nothing to warn about.
@@ -163,28 +289,59 @@ export function draftPlan(source) {
       warnings.push('component-count-unknown');
     }
 
-    const checks = parseInlineChecks(rawDisable);
-    const successes = successesFor(rawDisable, checks);
-    const ranks = ranksFor(rawDisable, checks);
-    checks.forEach((c, i) => {
-      const successesNeeded = successes.counts[i];
-      if (successes.inferred[i] && !warnings.includes('successes-heuristic')) {
-        warnings.push('successes-heuristic');
+    let disableText = flatten(rawDisable);
+    let checks = parseInlineChecks(rawDisable).filter((c) => isDisableOption(disableText, c));
+    if (!checks.length) {
+      disableText = stripHtml(rawDisable);
+      checks = parsePlainChecks(disableText);
+    }
+    const joined = (i) => isConnectorOnly(disableText.slice(checks[i].end, checks[i + 1].index));
+    // "@Check[arcana] or @Check[occultism|dc:17]": the alternative carries the DC.
+    for (let i = checks.length - 2; i >= 0; i--) {
+      if (checks[i].dc == null && joined(i)) checks[i].dc = checks[i + 1].dc;
+    }
+    for (let i = 1; i < checks.length; i++) {
+      if (checks[i].dc == null && joined(i - 1)) checks[i].dc = checks[i - 1].dc;
+    }
+
+    const successes = successesFor(disableText, checks);
+    const ranks = ranksFor(disableText, checks);
+    const counts = successes.counts;
+    let guessed = successes.inferred.some(Boolean);
+    let shared = checks.length > 1 ? parseSharedSuccesses(stripHtml(rawDisable)) : null;
+    for (const { n, group } of successRequirements(disableText, checks, joined)) {
+      if (!n || n < 2) continue;
+      if (group.length > 1 && group.length === checks.length) {
+        if (shared == null && counts.every((c) => c === 1)) shared = n;
+        continue;
       }
+      if (shared != null) continue;
+      for (const i of group) if (counts[i] === 1) counts[i] = n;
+      if (group.length > 1) guessed = true;
+    }
+    // One check naming several skills "three times" is three successes with any of them.
+    const oneCheck = checks.length > 1 && checks.every((c) => c.index === checks[0].index);
+    if (oneCheck && shared == null && counts[0] > 1 && counts.every((c) => c === counts[0])) {
+      shared = counts[0];
+      counts.fill(1);
+    }
+    if (guessed) warnings.push('successes-heuristic');
+
+    checks.forEach((c, i) => {
       component.disables.push({
         id: `d${i + 1}`,
         skill: c.skill,
         dc: c.dc,
         label: c.label.replace(PROFICIENCY_RE, '').trim() || c.skill,
         traits: c.traits,
-        successesNeeded,
+        successesNeeded: counts[i],
         minRank: ranks[i],
       });
     });
     if (!checks.length) warnings.push('no-disables');
-    else if (checks.length > 1) {
-      component.sharedSuccesses = parseSharedSuccesses(stripHtml(rawDisable));
-      if (component.sharedSuccesses != null) warnings.push('shared-successes');
+    if (shared != null) {
+      component.sharedSuccesses = shared;
+      warnings.push('shared-successes');
     }
 
     component.counteract = parseCounteracts(rawDisable)[0] ?? null;

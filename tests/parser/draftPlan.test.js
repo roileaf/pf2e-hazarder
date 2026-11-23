@@ -292,3 +292,154 @@ test('rank inside the label or after an action cost; label loses the rank', () =
     ['arcana', 1],
   ]);
 });
+
+describe('stated success counts without "any combination"', () => {
+  const draft = (disable) => draftPlan(hazard({ routine: '(1 action)', disable }));
+  const opts = (plan) => plan.components[0].disables.map((d) => [d.skill, d.successesNeeded]);
+
+  test('one option: it needs that many', () => {
+    const { plan } = draft(
+      '@Check[survival|dc:27] to unthread the vines; four successes are required to disable the haunt.',
+    );
+    expect(opts(plan)).toEqual([['survival', 4]]);
+    expect(plan.components[0].sharedSuccesses).toBeNull();
+  });
+
+  test('every option: they share the total', () => {
+    const { plan, warnings } = draft(
+      '@Check[intimidation|dc:25] (trained) to threaten the guests or @Check[religion|dc:28] (expert) to exorcise the haunt; two successes are required to disable it.',
+    );
+    expect(plan.components[0].sharedSuccesses).toBe(2);
+    expect(opts(plan)).toEqual([
+      ['intimidation', 1],
+      ['religion', 1],
+    ]);
+    expect(warnings).toContain('shared-successes');
+  });
+
+  test('in brackets it belongs to the option it follows', () => {
+    const { plan } = draft(
+      '@Check[thievery|dc:24] (trained) to press hidden knobs (three successes are required to disable the trap); @Check[crafting|dc:24] (expert) to sabotage the mechanisms',
+    );
+    expect(opts(plan)).toEqual([
+      ['thievery', 3],
+      ['crafting', 1],
+    ]);
+    expect(plan.components[0].sharedSuccesses).toBeNull();
+  });
+
+  test('a count written before the checks', () => {
+    expect(
+      draft(
+        'Three @Check[thievery|dc:48] (legendary) or @Check[occultism|dc:48] (master) checks to mend the rift.',
+      ).plan.components[0].sharedSuccesses,
+    ).toBe(3);
+    const { plan, warnings } = draft(
+      '@Check[thievery|dc:22] (trained) to disable the plate, or four @Check[thievery|dc:18] (trained) checks to plug the launchers',
+    );
+    expect(opts(plan)).toEqual([
+      ['thievery', 1],
+      ['thievery', 4],
+    ]);
+    expect(warnings).not.toContain('successes-heuristic');
+  });
+
+  test('some of several options: each needs it, flagged as a guess', () => {
+    const { plan, warnings } = draft(
+      'Three @Check[nature|dc:33] or @Check[occultism|dc:33] checks to clot the blood, a @Check[religion|dc:36] check to offer prayers',
+    );
+    expect(opts(plan)).toEqual([
+      ['nature', 3],
+      ['occultism', 3],
+      ['religion', 1],
+    ]);
+    expect(warnings).toContain('successes-heuristic');
+  });
+
+  test('"counts as two successes" is not a requirement', () => {
+    const { plan } = draft(
+      '@Check[arcana|dc:20] or @Check[religion|dc:20] to alter the runes. A critical success counts as two successes.',
+    );
+    expect(plan.components[0].sharedSuccesses).toBeNull();
+    expect(opts(plan).every(([, n]) => n === 1)).toBe(true);
+  });
+});
+
+describe('unusual check notations', () => {
+  const draft = (disable) =>
+    draftPlan(hazard({ routine: '(1 action)', disable })).plan.components[0];
+
+  test('[[/act disable-device]] is a Thievery check', () => {
+    const c = draft(
+      'Three [[/act disable-device dc=31]]{DC 31 Thievery} (expert) checks to disable the latches',
+    );
+    expect(c.disables).toMatchObject([
+      {
+        skill: 'thievery',
+        dc: 31,
+        successesNeeded: 3,
+        minRank: 2,
+        traits: ['action:disable-a-device'],
+      },
+    ]);
+  });
+
+  test('plain text skills and DC', () => {
+    const c = draft('Survival (trained) or Thievery (expert) DC 20 to rearrange the webbing.');
+    expect(c.disables.map((d) => [d.skill, d.dc, d.minRank])).toEqual([
+      ['survival', 20, 1],
+      ['thievery', 20, 2],
+    ]);
+  });
+
+  test('one check naming several skills, N times: a shared total', () => {
+    const c = draft(
+      '@Check[type:arcana,nature,thievery|dc:18] (trained) three times to counter the energies.',
+    );
+    expect(c.disables.map((d) => [d.skill, d.dc, d.successesNeeded, d.minRank])).toEqual([
+      ['arcana', 18, 1, 1],
+      ['nature', 18, 1, 1],
+      ['thievery', 18, 1, 1],
+    ]);
+    expect(c.sharedSuccesses).toBe(3);
+  });
+
+  test('a missing DC comes from the joined alternative; lore names are slugged', () => {
+    const c = draft(
+      '@Check[arcana] (trained) or @Check[occultism|dc:17] (trained) to weaken it, or @Check[HellLore|dc:34]',
+    );
+    expect(c.disables.map((d) => [d.skill, d.dc])).toEqual([
+      ['arcana', 17],
+      ['occultism', 17],
+      ['hell-lore', 34],
+    ]);
+  });
+
+  test('consequence saves and flat checks are not disable options; a real save is', () => {
+    const c = draft(
+      '@Check[religion|dc:28] (expert) to rest the dead, or @Check[will|dc:28] save (expert) to refuse to listen. A creature that fails must succeed at a @Check[will|dc:28|options:inflicts:confused] save, taking damage (@Check[reflex|dc:20|basic] save). @Check[flat|dc:5]',
+    );
+    expect(c.disables.map((d) => d.skill)).toEqual(['religion', 'will']);
+  });
+
+  test('counteract written without a spell link', () => {
+    const c = draft(
+      '@Check[thievery|dc:19] to cover the mirror or dispel magic (2nd level; counteract DC 19) to counteract the binding',
+    );
+    expect(c.counteract).toEqual({ spellUuid: null, name: 'Dispel Magic', rank: 2, dc: 19 });
+  });
+});
+
+describe('actions per turn, less common wordings', () => {
+  const apt = (routine) =>
+    draftPlan(hazard({ routine, disable: '@Check[thievery|dc:20]' })).plan.actionsPerTurn;
+  test.each([
+    ['<p><span class="action-glyph">d</span> Singe uses its first action to Strike.</p>', 2],
+    ['<p><span class="action-glyph">a</span> Tentacles grasp at all creatures.</p>', 1],
+    ['<p>(1 to 3 actions) The flow uses up to 3 actions to Strike.</p>', 3],
+    ['<p>The keystone uses its 3 actions to Electrify, Spin, and then Launch Darts.</p>', 3],
+    ['<p>Each turn, the walls use 1 action. Roll a d10.</p>', 1],
+    ['<p>A Voyage Through the Infinite (1 action) Every round on its turn, the trap…</p>', 1],
+    ['<p>On its turn, each shadow tendril uses 1 action to make a lash Strike.</p>', null],
+  ])('%s', (routine, n) => expect(apt(routine)).toBe(n));
+});

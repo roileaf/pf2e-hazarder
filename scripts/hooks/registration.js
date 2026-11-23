@@ -1,6 +1,6 @@
 import { MODULE_ID, OUTCOME_TO_DEGREE, STATUS } from '../constants.js';
 import { extractCheck, matchCheck } from '../services/RollMatcher.js';
-import { rankFromMessage } from '../services/HazardRunner.js';
+import { CHECK_TYPES, rankFromMessage } from '../services/HazardRunner.js';
 import { getSystemFlags } from '../systemCompat.js';
 import {
   baseActor,
@@ -38,16 +38,19 @@ async function confirmReview(actor) {
 
 function instanceLabel(tokenDoc, instanceKey) {
   const [componentId, index] = instanceKey.split(':');
-  const comp = getOrDraftPlan(tokenDoc.actor).plan.components.find((c) => c.id === componentId);
+  const { components } = getOrDraftPlan(tokenDoc.actor).plan;
+  const comp = components.find((c) => c.id === componentId);
   if (!comp) return instanceKey;
-  return comp.count > 1 ? `${comp.name} ${Number(index) + 1}` : comp.name;
+  if (comp.count > 1) return `${comp.name} ${Number(index) + 1}`;
+  // A hazard's only instance needs no label of its own: the hazard's name already identifies it.
+  return components.length > 1 ? comp.name : null;
 }
 
 function bindApplyLater(runner, message, root) {
   // Covers checks rolled while no GM was online: the GM can apply them later.
   if (message.flags?.[MODULE_ID]?.applied || message.flags?.[MODULE_ID]?.candidates?.length) return;
   const context = getSystemFlags(message)?.context ?? message.flags?.pf2e?.context;
-  if (!context || !['skill-check', 'perception-check'].includes(context.type)) return;
+  if (!context || !CHECK_TYPES.has(context.type)) return;
   if (matchCheck(extractCheck(context), runner.getCandidates()).kind === 'none') return;
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -75,7 +78,8 @@ function bindCandidatePicker(runner, message, root) {
     if (!tokenDoc) continue;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = `${tokenDoc.name} · ${instanceLabel(tokenDoc, c.instanceKey)}`;
+    const label = instanceLabel(tokenDoc, c.instanceKey);
+    btn.textContent = label ? `${tokenDoc.name} · ${label}` : tokenDoc.name;
     btn.addEventListener('click', async () => {
       const buttons = box.querySelectorAll('button');
       buttons.forEach((b) => (b.disabled = true));

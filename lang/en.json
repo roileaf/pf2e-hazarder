@@ -41,7 +41,7 @@
       "NoStatistic": "{actor} has no {skill} statistic.",
       "PostCheck": "Post this check to chat",
       "AnyCombination": "{have} / {need} successes, any combination",
-      "RankTooLow": "{actor} needs {rank} proficiency for {skill}; the check does not count."
+      "RankTooLow": "{actor} needs {rank} proficiency in {skill}; the check does not count."
     },
     "Turn": {
       "Title": "{name}'s turn",

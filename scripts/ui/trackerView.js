@@ -7,7 +7,7 @@ const humanise = (slug) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 
-function skillLabel(skill) {
+export function skillLabel(skill) {
   const configured = globalThis.CONFIG?.PF2E?.skills?.[skill]?.label;
   return configured ? game.i18n.localize(configured) : humanise(skill);
 }

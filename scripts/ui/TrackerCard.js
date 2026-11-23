@@ -7,7 +7,7 @@ import {
   getTrackerMessageId,
   setTrackerMessageId,
 } from '../stores/hazardStore.js';
-import { buildTrackerView } from './trackerView.js';
+import { buildTrackerView, skillLabel } from './trackerView.js';
 
 const TEMPLATE = `modules/${MODULE_ID}/templates/tracker-card.hbs`;
 
@@ -72,7 +72,7 @@ export async function rollDisable({ tokenUuid, instanceKey, disableId }) {
       game.i18n.format('PF2E_HAZARDER.Tracker.RankTooLow', {
         actor: roller.name,
         rank: game.i18n.localize(`PF2E_HAZARDER.Rank.${RANKS[disable.minRank]}`),
-        skill: disable.label ?? disable.skill,
+        skill: skillLabel(disable.skill),
       }),
     );
     return;

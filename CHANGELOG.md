@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3 (prerelease)
+
+- **Parser audit against every compendium hazard:**
+  - Stated success counts without "any combination" ("three successes are required to disable the haunt", "Three Thievery checks to…", "(requires two successes)") now set the option's successes, or a shared total when they cover every option.
+  - Checks written as `[[/act disable-device dc=27]]`, as plain text ("Thievery (expert) DC 20"), or naming several skills in one check are recognised; misnamed skills and Lores are corrected; a check with no DC takes its alternative's.
+  - Saving throws and flat checks that are consequences, not ways to disable, are no longer listed as disable options. A save that is a real option now counts when rolled.
+  - Counteracts written without a spell link are picked up, and "level" is read like "rank".
+  - Actions per turn are read from action glyphs, "(1 to 3 actions)" and "uses its 3 actions" wordings.
+- The proficiency warning names the skill ("Occultism"), and the picker no longer repeats a single hazard's name.
+
 ## 0.1.2 (prerelease)
 
 - **Proficiency requirements:** disable options marked "(trained)", "(expert)", "(master)" or "(legendary)" record a minimum rank, shown as a badge on the tracker and editable in the plan. Under-ranked characters can't roll from the tracker, and under-ranked rolls from chat are not counted (a warning tells the GM). Toggle with the "Enforce proficiency requirements" setting (on by default).

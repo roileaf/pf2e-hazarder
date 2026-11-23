@@ -361,3 +361,21 @@ describe('minimum proficiency rank', () => {
     }
   });
 });
+
+test('a saving throw counts when the hazard lists that save as a disable option', async () => {
+  const saved = {
+    ...plan,
+    components: [
+      {
+        ...plan.components[0],
+        disables: [{ id: 'd1', skill: 'will', dc: 28, successesNeeded: 1 }],
+      },
+    ],
+  };
+  const { runner, tokenDoc } = setup({ plan: saved });
+  const res = await runner.handleCheckMessage(
+    msg(ctx({ type: 'saving-throw', dc: { value: 28 }, options: ['check:statistic:will'] })),
+  );
+  expect(res.applied).toBe(true);
+  expect(tokenDoc.state.instances[0].disabled).toBe(true);
+});
