@@ -1,0 +1,23 @@
+<div class="hazarder-card hz-turn hz-reaction-strikes" data-token-uuid="{{tokenUuid}}">
+  <header class="hz-header">
+    <span class="hz-header-icon"><i class="fa-solid fa-bolt"></i></span>
+    <span class="hz-header-name">{{title}}</span>
+  </header>
+  <div class="hz-body">
+  {{#each strikes}}
+    <div class="hz-strike">
+      <span class="hz-strike-name">
+        <i class="fa-solid fa-hand-fist"></i> {{name}}
+        <button type="button" class="hz-info-inline" data-hz-action="item-info" data-item-id="{{id}}" data-token-uuid="{{../tokenUuid}}" data-tooltip="{{localize 'PF2E_HAZARDER.Turn.Details'}}" aria-label="{{localize 'PF2E_HAZARDER.Turn.Details'}}"><i class="fa-solid fa-circle-info"></i></button>
+      </span>
+      <div class="hz-strike-buttons">
+        {{#each variants}}<button type="button" class="hz-chip hz-attack" data-hz-action="strike" data-item-id="{{../id}}" data-variant="{{index}}" data-token-uuid="{{../../tokenUuid}}">{{label}}</button>{{/each}}
+        {{#if hasDamage}}
+          <button type="button" class="hz-chip hz-damage" data-hz-action="strike-damage" data-item-id="{{id}}" data-token-uuid="{{../tokenUuid}}">{{localize "PF2E_HAZARDER.Turn.Damage"}}</button>
+          <button type="button" class="hz-chip hz-damage" data-hz-action="strike-critical" data-item-id="{{id}}" data-token-uuid="{{../tokenUuid}}">{{localize "PF2E_HAZARDER.Turn.Critical"}}</button>
+        {{/if}}
+      </div>
+    </div>
+  {{/each}}
+  </div>
+</div>

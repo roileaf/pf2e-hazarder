@@ -33,6 +33,8 @@ Hazard state lives on the token (`flags.pf2e-hazarder.state`): an `updateToken` 
 | Public hazard turn card — also post a short public card on the hazard's turn | world | off |
 | Skip disabled hazards — advance past a disabled hazard's turn | world | on |
 | Remove disabled hazards from combat — once every component is disabled | world | off |
+| Hazard's reaction when it enters an encounter — ask the GM, always post it, or never | world | ask |
+| Enforce proficiency requirements — "(master)" options need that rank | world | on |
 | Debug logging | client | off |
 
 ## Requirements

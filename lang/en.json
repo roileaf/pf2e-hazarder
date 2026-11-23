@@ -135,7 +135,14 @@
     },
     "Trigger": {
       "Title": "{name} is triggered",
-      "Body": "{name} enters the encounter. Post its reaction, <strong>{reaction}</strong>?"
+      "Body": "{name} enters the encounter. Post its reaction, <strong>{reaction}</strong>?",
+      "Strikes": "{reaction}: Strikes",
+      "StrikeTitle": "{reaction}: {strike} Strike",
+      "StrikeBody": "Who does the {strike} Strike target?",
+      "StrikeChoice": "Strike",
+      "Target": "Target",
+      "RollStrike": "Roll Strike",
+      "LaterStrike": "Later"
     }
   }
 }

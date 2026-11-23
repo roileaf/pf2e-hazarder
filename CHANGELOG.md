@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8 (prerelease)
+
+- **The reaction's Strike, aimed and rolled:** when a posted reaction calls for a Strike ("…makes a spear Strike against the triggering creature"), the GM is asked who it targets and the Strike is rolled against that creature. The list offers the GM's current target first, then player characters, then others in the fight. Choosing "Later", or having the hazard on a scene the GM isn't viewing, posts a GM-only card with the Strike's attack, damage and critical buttons instead.
+
 ## 0.1.7 (prerelease)
 
 - **A posted reaction brings the abilities it names:** when a hazard's reaction is posted (entering an encounter, or after a critical failure) and its text names another of the hazard's abilities ("…exposing the creature to the haunt's burn knowledge effect"), that ability is posted right after it, with its description and saves. Before, it only appeared on the hazard's own turn.
