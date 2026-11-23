@@ -1,3 +1,31 @@
+import { stripHtml } from '../parser/inline.js';
+
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The hazard's other abilities that `item`'s text names ("…exposing the creature to the haunt's
+ * burn knowledge effect"): the rules a reader needs next, which otherwise only show on the
+ * hazard's own turn. Strikes are left out; they are rolled from the turn card.
+ */
+export function referencedAbilities(actor, item) {
+  const text = stripHtml(item?.system?.description?.value).toLowerCase();
+  if (!text) return [];
+  return [...(actor?.items ?? [])].filter((other) => {
+    if (other.id === item.id || other.type !== 'action') return false;
+    if (other.system?.actionType?.value === 'reaction') return false;
+    const name = String(other.name ?? '')
+      .trim()
+      .toLowerCase();
+    return name.length >= 4 && new RegExp(`\\b${escapeRegExp(name)}\\b`).test(text);
+  });
+}
+
+/** Posts a reaction, then each ability its text names. */
+async function postReaction(actor, item) {
+  await item.toMessage();
+  for (const ability of referencedAbilities(actor, item)) await ability.toMessage();
+}
+
 /** After a critical failure. Resolves to whether the reaction was posted. */
 export async function showTriggered(tokenDoc, plan) {
   const name = tokenDoc.name;
@@ -17,7 +45,7 @@ export async function showTriggered(tokenDoc, plan) {
     content: `<p>${game.i18n.localize('PF2E_HAZARDER.Triggered.Body')}</p>`,
     yes: { label: game.i18n.localize('PF2E_HAZARDER.Triggered.Fire') },
   });
-  if (fire) await item.toMessage();
+  if (fire) await postReaction(tokenDoc.actor, item);
   return !!fire;
 }
 
@@ -40,6 +68,6 @@ export async function offerTriggerReaction(tokenDoc, plan, { ask = true } = {}) 
     });
     if (!fire) return false;
   }
-  await item.toMessage();
+  await postReaction(tokenDoc.actor, item);
   return true;
 }

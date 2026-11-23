@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 (prerelease)
+
+- **A posted reaction brings the abilities it names:** when a hazard's reaction is posted (entering an encounter, or after a critical failure) and its text names another of the hazard's abilities ("…exposing the creature to the haunt's burn knowledge effect"), that ability is posted right after it, with its description and saves. Before, it only appeared on the hazard's own turn.
+
 ## 0.1.6 (prerelease)
 
 - **Trigger reaction when a hazard enters an encounter:** a complex hazard uses its reaction when triggered, then rolls initiative. When combat starts with a hazard in it, or a hazard joins a running combat, the GM is asked whether to post that reaction. It is offered once until the hazard is reset, and not again if it was already posted after a critical failure. New world setting: ask (default), always post, or never.
