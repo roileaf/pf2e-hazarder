@@ -15,6 +15,17 @@ Run Pathfinder 2e and Starfinder 2e complex hazards in Foundry VTT v14 — the r
 
 Add a complex hazard to combat and run combat as normal. Review the plan if asked. GMs can open the plan from the hazard sheet header (**Hazard Plan**) or with `game.modules.get('pf2e-hazarder').api.openPlan(actor)`.
 
+## API for other modules
+
+`game.modules.get('pf2e-hazarder').api`:
+
+- `hazards()` — the hazards being tracked (in combat, or active on the viewed scene). Each is `{ tokenUuid, tokenId, name, status, disabled, options }`, and each open disable option is `{ instanceKey, instanceLabel, disableId, skill, label, dc, minRank, traits, have, successesLeft, pooledWith }`. `dc` is null for players when PF2e hides DCs. `pooledWith` lists the other options whose successes count toward the same total.
+- `hazard(tokenDoc)` — the same for one token, or `null` if it isn't a tracked hazard.
+- `canAttempt(actor, option)` — `{ ok, reason, rank }`; `reason` is `'no-statistic'` or `'rank-too-low'`.
+- `rollDisable({ tokenUuid, instanceKey, disableId, actor, rollParams })` — rolls the option as `actor`; the result is applied to the hazard automatically. `rollParams` go to the PF2e roll (`{ event }`, `{ skipDialog: true }`).
+
+Hazard state lives on the token (`flags.pf2e-hazarder.state`): an `updateToken` hook with that flag changed means the answers above have changed.
+
 ## Settings
 
 | Setting | Scope | Default |

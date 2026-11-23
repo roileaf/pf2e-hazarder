@@ -60,7 +60,8 @@
       "SaveForTargetsAction": "Post this save for your targets",
       "ShowTracker": "Show disable tracker",
       "OpenSheet": "Open hazard sheet",
-      "ActionsLeft": "{left} / {total} actions left"
+      "ActionsLeft": "{left} / {total} actions left",
+      "Passive": "Passive ability (costs no actions)"
     },
     "Plan": {
       "Title": "Hazard plan: {name}",
@@ -81,7 +82,7 @@
       "AddDisable": "Add disable option",
       "Warnings": "Parser warnings",
       "Reaction": "Reaction",
-      "RoutineItems": "Routine items",
+      "RoutineItems": "Shown on the turn card",
       "RemoveComponent": "Remove component",
       "RemoveDisable": "Remove disable option",
       "Counteract": "Counteract",
@@ -90,7 +91,11 @@
       "OpenSheet": "Open hazard sheet",
       "MinRank": "Min. rank",
       "Group": "Success group",
-      "GroupHint": "Success group: options with the same letter earn their successes together (e.g. three successes between Nature and Occultism). Blank = the option counts on its own."
+      "GroupHint": "Success group: options with the same letter earn their successes together (e.g. three successes between Nature and Occultism). Blank = the option counts on its own.",
+      "Kind": {
+        "passive": "passive",
+        "reaction": "reaction"
+      }
     },
     "Warnings": {
       "actions-per-turn-missing": "Could not find \"(N actions)\" in the routine.",

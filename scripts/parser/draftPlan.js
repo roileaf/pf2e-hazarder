@@ -362,10 +362,16 @@ export function draftPlan(source) {
 
     const items = Array.isArray(source.items) ? source.items : [];
     const isReaction = (i) => i.type === 'action' && i.system?.actionType?.value === 'reaction';
-    plan.reactionItemId = items.find(isReaction)?._id ?? null;
-    const isPassive = (i) => i.type === 'action' && i.system?.actionType?.value === 'passive';
+    // The reaction that starts the hazard ("…the trap rolls initiative") is its trigger. Any other
+    // reaction fires during the fight (when it breaks, when someone fails to disable it) and is
+    // listed on the turn card with the hazard's actions, Strikes and passive abilities.
+    const reactions = items.filter(isReaction);
+    const trigger =
+      reactions.find((i) => /\binitiative\b/i.test(stripHtml(i.system?.description?.value))) ??
+      reactions[0];
+    plan.reactionItemId = trigger?._id ?? null;
     plan.routineItemIds = items
-      .filter((i) => (i.type === 'melee' || i.type === 'action') && !isReaction(i) && !isPassive(i))
+      .filter((i) => (i.type === 'melee' || i.type === 'action') && i !== trigger)
       .map((i) => i._id);
     plan.resetText = stripHtml(details.reset);
     return { plan, warnings };

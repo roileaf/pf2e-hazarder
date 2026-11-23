@@ -135,7 +135,7 @@ test('planToContext lists warnings and items', () => {
   };
   const ctx = planToContext(base, ['no-disables'], actor);
   expect(ctx.warnings).toEqual(['PF2E_HAZARDER.Warnings.no-disables']);
-  expect(ctx.items).toEqual([{ id: 'r1', name: 'Awaken' }]);
+  expect(ctx.items).toEqual([{ id: 'r1', name: 'Awaken', kind: null }]);
   expect(ctx.plan).toBe(base);
 });
 
@@ -214,7 +214,31 @@ test('planToContext marks routine items as checked', () => {
     ],
   };
   const ctx = planToContext({ ...base, reactionItemId: 'r1', routineItemIds: ['m1'] }, [], actor);
-  expect(ctx.routineItems).toEqual([{ id: 'm1', name: 'Slam', checked: true }]);
+  expect(ctx.routineItems).toEqual([
+    { id: 'r1', name: 'Awaken', kind: null, kindLabel: null, checked: false },
+    { id: 'm1', name: 'Slam', kind: null, kindLabel: null, checked: true },
+  ]);
+  const typed = {
+    items: [
+      {
+        id: 'p1',
+        name: 'Burn Knowledge',
+        type: 'action',
+        system: { actionType: { value: 'passive' } },
+      },
+      { id: 'r2', name: 'Rebuke', type: 'action', system: { actionType: { value: 'reaction' } } },
+    ],
+  };
+  expect(
+    planToContext({ ...base, routineItemIds: ['p1'] }, [], typed).routineItems.map((i) => [
+      i.id,
+      i.kindLabel,
+      i.checked,
+    ]),
+  ).toEqual([
+    ['p1', 'PF2E_HAZARDER.Plan.Kind.passive', true],
+    ['r2', 'PF2E_HAZARDER.Plan.Kind.reaction', false],
+  ]);
 });
 
 describe('skillOptions', () => {

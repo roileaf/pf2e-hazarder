@@ -32,9 +32,14 @@ export function buildTurnView({
   const disabled = disabledCount(state);
   const byId = new Map(items.map((i) => [i.id, i]));
   const routineEmpty = !String(routineHtml ?? '').trim();
+  // Abilities that cost actions first, then passive ones, then reactions; plan order within each.
+  const rank = (i) => (i.reaction ? 2 : i.passive ? 1 : 0);
   const routine = (plan.routineItemIds ?? [])
     .map((id) => byId.get(id))
-    .filter((i) => i && !i.passive);
+    .filter(Boolean)
+    .map((item, order) => ({ item, order }))
+    .sort((a, b) => rank(a.item) - rank(b.item) || a.order - b.order)
+    .map(({ item }) => item);
   return {
     title: game.i18n.format('PF2E_HAZARDER.Turn.Title', { name }),
     roundLabel: round != null ? game.i18n.format('PF2E_HAZARDER.Turn.Round', { round }) : null,
@@ -69,6 +74,9 @@ export function buildTurnView({
         id: i.id,
         name: i.name,
         cost: i.cost ?? null,
+        // Passive abilities and reactions are listed for reference: they never spend actions.
+        passive: !!i.passive,
+        reaction: !!i.reaction,
         actionCost: /^[1-3]$/.test(String(i.cost ?? '')) ? Number(i.cost) : 0,
         descriptionHtml: i.descriptionHtml ?? null,
         // With no routine text, the actions are the routine: show them expanded.

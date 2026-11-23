@@ -61,10 +61,16 @@ export function skillOptions() {
   return options.sort((a, b) => a.label.localeCompare(b.label));
 }
 
+// 'passive' / 'reaction' for abilities that never spend the hazard's actions, else null.
+function itemKind(item) {
+  const type = item.type === 'action' ? item.system?.actionType?.value : null;
+  return type === 'passive' || type === 'reaction' ? type : null;
+}
+
 export function planToContext(plan, warnings, actor) {
   const items = [...(actor.items ?? [])]
     .filter((i) => i.type === 'action' || i.type === 'melee')
-    .map((i) => ({ id: i.id, name: i.name }));
+    .map((i) => ({ id: i.id, name: i.name, kind: itemKind(i) }));
   const routine = new Set(plan.routineItemIds ?? []);
   return {
     plan,
@@ -73,9 +79,12 @@ export function planToContext(plan, warnings, actor) {
     ranks: RANKS.map((r, value) => ({ value, label: `PF2E_HAZARDER.Rank.${r}` })),
     warnings: warnings.map((w) => `PF2E_HAZARDER.Warnings.${w}`),
     items,
-    routineItems: items
-      .filter((i) => i.id !== plan.reactionItemId)
-      .map((i) => ({ ...i, checked: routine.has(i.id) })),
+    // Every ability can be listed on the turn card, the trigger reaction included (off by default).
+    routineItems: items.map((i) => ({
+      ...i,
+      kindLabel: i.kind ? `PF2E_HAZARDER.Plan.Kind.${i.kind}` : null,
+      checked: routine.has(i.id),
+    })),
   };
 }
 

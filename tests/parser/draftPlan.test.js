@@ -136,7 +136,33 @@ test('reaction and routine items', () => {
   expect(plan.routineItemIds).toEqual(['m1', 'a1']);
 });
 
-test('passive abilities are not routine items', () => {
+test('the trigger reaction is the one that rolls initiative; other reactions are listed', () => {
+  const reaction = (id, name, text) => ({
+    _id: id,
+    type: 'action',
+    name,
+    system: { actionType: { value: 'reaction' }, description: { value: `<p>${text}</p>` } },
+  });
+  const { plan } = draftPlan(
+    hazard({ routine: '(1 action)' }, [
+      reaction(
+        'r1',
+        'Spill Eyeballs',
+        '<strong>Trigger</strong> The tank reaches its Broken Threshold',
+      ),
+      reaction(
+        'r2',
+        'Eye-Opener',
+        '<strong>Trigger</strong> Creatures remain <strong>Effect</strong> The trap rolls initiative.',
+      ),
+      { _id: 'm1', type: 'melee', name: 'Fist', system: {} },
+    ]),
+  );
+  expect(plan.reactionItemId).toBe('r2');
+  expect(plan.routineItemIds).toEqual(['r1', 'm1']);
+});
+
+test('passive abilities are listed with the routine items', () => {
   const { plan } = draftPlan(
     hazard({ routine: '(3 actions)' }, [
       {
@@ -148,7 +174,7 @@ test('passive abilities are not routine items', () => {
       { _id: 'm1', type: 'melee', name: 'Ghostly Attack', system: { actionType: { value: null } } },
     ]),
   );
-  expect(plan.routineItemIds).toEqual(['m1']);
+  expect(plan.routineItemIds).toEqual(['p1', 'm1']);
 });
 
 test('defaults and reset text', () => {

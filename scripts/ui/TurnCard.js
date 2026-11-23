@@ -26,12 +26,17 @@ function actionGlyph(item) {
 
 function describeItem(actor, item) {
   const base = { id: item.id, name: item.name };
-  if (item.type === 'action' && item.system?.actionType?.value === 'passive') {
-    return { ...base, passive: true };
-  }
   if (item.type !== 'melee') {
     const description = item.system?.description?.value ?? '';
-    return { ...base, cost: actionGlyph(item), description, saves: extractSaves(description) };
+    const type = item.system?.actionType?.value;
+    return {
+      ...base,
+      cost: actionGlyph(item),
+      passive: type === 'passive',
+      reaction: type === 'reaction',
+      description,
+      saves: extractSaves(description),
+    };
   }
   const strike = findStrike(actor, item.id);
   if (!strike) return base;

@@ -39,8 +39,8 @@ test('null actions per turn gives no pips', () => {
   expect(v.disabledNote).toBeNull();
 });
 
-test('strikes are split from actions and passives are dropped', () => {
-  const p = { ...plan, routineItemIds: ['m1', 'p1', 'a1'] };
+test('strikes are split from actions; passives and reactions follow, costing nothing', () => {
+  const p = { ...plan, routineItemIds: ['r2', 'm1', 'p1', 'a1'] };
   const v = buildTurnView({
     name: 'Endless Struggle',
     plan: p,
@@ -52,8 +52,9 @@ test('strikes are split from actions and passives are dropped', () => {
         name: 'Ghostly Attack',
         strike: { variants: ['+20', '+15', '+10'], hasDamage: true },
       },
-      { id: 'p1', name: 'Void Healing', passive: true },
-      { id: 'a1', name: 'Spectral Uprising' },
+      { id: 'p1', name: 'Void Healing', passive: true, saves: [{ statistic: 'will', dc: 23 }] },
+      { id: 'a1', name: 'Spectral Uprising', cost: '2' },
+      { id: 'r2', name: 'Rebuke', cost: 'R', reaction: true },
     ],
   });
   expect(v.strikes).toEqual([
@@ -68,7 +69,12 @@ test('strikes are split from actions and passives are dropped', () => {
       hasDamage: true,
     },
   ]);
-  expect(v.items.map((i) => i.id)).toEqual(['a1']);
+  expect(v.items.map((i) => [i.id, i.actionCost, i.passive, i.reaction])).toEqual([
+    ['a1', 2, false, false],
+    ['p1', 0, true, false],
+    ['r2', 0, false, true],
+  ]);
+  expect(v.items[1].saves).toHaveLength(1);
 });
 
 test('traits, saves, outcomes and round', () => {
@@ -129,6 +135,8 @@ test('actions carry description, cost and their own saves; empty routine opens t
       id: 'a1',
       name: 'Choke',
       cost: 'free',
+      passive: false,
+      reaction: false,
       actionCost: 0,
       descriptionHtml: '<p>Trigger …</p>',
       open: true,
@@ -151,6 +159,8 @@ test('actions stay folded when the routine has text', () => {
     id: 'a1',
     name: 'Choke',
     cost: null,
+    passive: false,
+    reaction: false,
     actionCost: 0,
     descriptionHtml: null,
     open: false,

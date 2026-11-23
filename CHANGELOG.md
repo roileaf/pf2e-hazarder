@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 (prerelease)
+
+- **Turn card lists every ability:** passive abilities now appear (with their description and save buttons) and cost no actions; ticking one under "Shown on the turn card" in the plan used to do nothing. Reactions that fire during the fight (when the hazard breaks, when a disable fails) are listed too. The reaction that starts the hazard ("…rolls initiative") stays out by default and is the one offered on a critical failure, even when it isn't the hazard's first reaction.
+- **API for other modules:** `hazards()`, `hazard(tokenDoc)`, `canAttempt(actor, option)` and `rollDisable({ …, actor, rollParams })` expose tracked hazards, their open disable options and a way to roll one as a given actor. See the README.
+
 ## 0.1.4 (prerelease)
 
 - **Success groups:** some of a hazard's disable options can earn their successes together while others stand alone (e.g. "Three Nature or Occultism checks, or one Religion check"). Detected from the disable text, shown on the tracker as "1 / 3 successes between Nature / Occultism", and editable in the plan with a group letter per option.

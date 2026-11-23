@@ -30,7 +30,7 @@
         <h4 class="hz-block-title">{{localize "PF2E_HAZARDER.Plan.RoutineItems"}}</h4>
         <div class="hz-checks">
           {{#each routineItems}}
-            <label class="hz-check"><input type="checkbox" name="routineItemIds.{{id}}" {{#if checked}}checked{{/if}} /> {{name}}</label>
+            <label class="hz-check"><input type="checkbox" name="routineItemIds.{{id}}" {{#if checked}}checked{{/if}} /> {{name}}{{#if kindLabel}} <span class="hz-kind">{{localize kindLabel}}</span>{{/if}}</label>
           {{/each}}
         </div>
       </div>
