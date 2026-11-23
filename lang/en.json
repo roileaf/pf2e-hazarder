@@ -41,7 +41,8 @@
       "NoStatistic": "{actor} has no {skill} statistic.",
       "PostCheck": "Post this check to chat",
       "AnyCombination": "{have} / {need} successes, any combination",
-      "RankTooLow": "{actor} needs {rank} proficiency in {skill}; the check does not count."
+      "RankTooLow": "{actor} needs {rank} proficiency in {skill}; the check does not count.",
+      "GroupTotal": "{have} / {need} successes between {skills}"
     },
     "Turn": {
       "Title": "{name}'s turn",
@@ -87,13 +88,15 @@
       "CounteractSpell": "Spell (blank = none)",
       "CounteractRank": "Rank",
       "OpenSheet": "Open hazard sheet",
-      "MinRank": "Min. rank"
+      "MinRank": "Min. rank",
+      "Group": "Success group",
+      "GroupHint": "Success group: options with the same letter earn their successes together (e.g. three successes between Nature and Occultism). Blank = the option counts on its own."
     },
     "Warnings": {
       "actions-per-turn-missing": "Could not find \"(N actions)\" in the routine.",
       "no-disables": "No inline checks found in the disable text.",
       "successes-heuristic": "Successes needed guessed from wording — please verify.",
-      "shared-successes": "Disable text says \"any combination\" — options share one success total. Please verify.",
+      "shared-successes": "Some disable options share one success total (see \"any combination\" and the group letters) — please verify.",
       "component-count-unknown": "Found a named component but not how many — set the count.",
       "parse-error": "The parser failed; fill the plan in by hand."
     },

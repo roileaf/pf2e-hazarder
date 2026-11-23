@@ -52,6 +52,7 @@ test('formToPlan parses numbers and confirms', () => {
       label: 'Erase',
       traits: ['t'],
       successesNeeded: 1,
+      group: null,
       minRank: null,
     },
   ]);
@@ -252,4 +253,40 @@ test('formToPlan reads sharedSuccesses; blank turns it off, missing keeps it', (
   expect(formToPlan(row({ sharedSuccesses: '' }), base).components[0].sharedSuccesses).toBeNull();
   const withShared = { ...base, components: [{ ...base.components[0], sharedSuccesses: 4 }] };
   expect(formToPlan(row({}), withShared).components[0].sharedSuccesses).toBe(4);
+});
+
+test('formToPlan groups: members take the largest count; a lone letter is dropped on save', () => {
+  const row = (letters, keepBlank = false) =>
+    formToPlan(
+      {
+        components: {
+          0: {
+            id: 'c1',
+            name: 'x',
+            count: '1',
+            actionsEach: '0',
+            disables: Object.fromEntries(
+              letters.map((group, i) => [
+                i,
+                { skill: `s${i}`, dc: '20', label: '', successesNeeded: String(i + 1), group },
+              ]),
+            ),
+          },
+        },
+      },
+      base,
+      { keepBlank },
+    ).components[0].disables.map((d) => [d.group, d.successesNeeded]);
+  expect(row(['a', 'A', ''])).toEqual([
+    ['A', 2],
+    ['A', 2],
+    [null, 3],
+  ]);
+  expect(row(['B', '', ''])).toEqual([
+    [null, 1],
+    [null, 2],
+    [null, 3],
+  ]);
+  // Mid-edit the lone letter is kept so a second option can join it.
+  expect(row(['B', '', ''], true)[0]).toEqual(['B', 1]);
 });

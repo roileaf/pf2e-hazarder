@@ -65,6 +65,7 @@
             <span>{{localize "PF2E_HAZARDER.Plan.Label"}}</span>
             <span>{{localize "PF2E_HAZARDER.Plan.MinRank"}}</span>
             <span data-tooltip="{{localize 'PF2E_HAZARDER.Plan.SuccessesNeeded'}}"><i class="fa-solid fa-check-double"></i></span>
+            <span data-tooltip="{{localize 'PF2E_HAZARDER.Plan.GroupHint'}}"><i class="fa-solid fa-shuffle"></i></span>
             <span></span>
           </div>
           {{#each c.disables as |d di|}}
@@ -77,6 +78,9 @@
                 {{selectOptions @root.ranks selected=d.minRank valueAttr="value" labelAttr="label" localize=true}}
               </select>
               <input type="number" min="1" name="components.{{ci}}.disables.{{di}}.successesNeeded" value="{{d.successesNeeded}}" aria-label="{{localize 'PF2E_HAZARDER.Plan.SuccessesNeeded'}}" />
+              <select name="components.{{ci}}.disables.{{di}}.group" aria-label="{{localize 'PF2E_HAZARDER.Plan.Group'}}">
+                {{selectOptions @root.groups selected=d.group valueAttr="value" labelAttr="label"}}
+              </select>
               <button type="button" class="hz-icon-btn hz-danger" data-action="removeDisable" data-component="{{ci}}" data-disable="{{di}}" data-tooltip="{{localize 'PF2E_HAZARDER.Plan.RemoveDisable'}}" aria-label="{{localize 'PF2E_HAZARDER.Plan.RemoveDisable'}}"><i class="fa-solid fa-xmark"></i></button>
             </div>
           {{/each}}

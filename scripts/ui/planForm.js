@@ -69,6 +69,7 @@ export function planToContext(plan, warnings, actor) {
   return {
     plan,
     skills: skillOptions(),
+    groups: [{ value: '', label: '—' }, ...GROUP_IDS.map((id) => ({ value: id, label: id }))],
     ranks: RANKS.map((r, value) => ({ value, label: `PF2E_HAZARDER.Rank.${r}` })),
     warnings: warnings.map((w) => `PF2E_HAZARDER.Warnings.${w}`),
     items,
@@ -103,6 +104,30 @@ function parseRank(value, prev) {
   return n != null && n >= 1 ? Math.min(RANKS.length - 1, n) : null;
 }
 
+export const GROUP_IDS = ['A', 'B', 'C', 'D'];
+
+// Options with the same letter earn their successes together; blank = on its own.
+function parseGroup(value, prev) {
+  if (value === undefined) return prev ?? null;
+  const id = String(value ?? '')
+    .trim()
+    .toUpperCase();
+  return GROUP_IDS.includes(id) ? id : null;
+}
+
+// A group is two or more options needing the same number between them.
+function settleGroups(disables) {
+  for (const id of GROUP_IDS) {
+    const members = disables.filter((d) => d.group === id);
+    if (members.length < 2) members.forEach((d) => (d.group = null));
+    else {
+      const need = Math.max(...members.map((d) => d.successesNeeded));
+      members.forEach((d) => (d.successesNeeded = need));
+    }
+  }
+  return disables;
+}
+
 // Blank or < 1 turns "any combination" mode off; a missing field keeps the saved value.
 function parseShared(value, prev) {
   if (value === undefined) return prev ?? null;
@@ -134,9 +159,12 @@ export function formToPlan(data, basePlan, { keepBlank = false } = {}) {
           label: (d.label && String(d.label).trim()) || skill,
           traits: d.id ? (prevDisables.get(did)?.traits ?? []) : [],
           successesNeeded: Math.max(1, int(d.successesNeeded) ?? 1),
+          group: parseGroup(d.group, prevDisables.get(did)?.group),
           minRank: parseRank(d.minRank, prevDisables.get(did)?.minRank),
         };
       });
+    // While editing, a lone letter is a group still being built; settle it on save.
+    if (!keepBlank) settleGroups(disables);
     return {
       id,
       name: (c.name && String(c.name).trim()) || prev?.name || (keepBlank ? '' : id),

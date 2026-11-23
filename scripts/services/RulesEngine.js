@@ -7,7 +7,6 @@ const needOf = (disable) => disable.successesNeeded ?? 1;
 const findComponent = (plan, componentId) => plan.components.find((c) => c.id === componentId);
 const findDisable = (plan, componentId, disableId) =>
   findComponent(plan, componentId)?.disables.find((d) => d.id === disableId);
-const sumProgress = (progress) => Object.values(progress ?? {}).reduce((a, n) => a + (n ?? 0), 0);
 
 /** Successes needed in "any combination" mode, or null when each option counts on its own. */
 export const sharedNeed = (component) => {
@@ -15,22 +14,37 @@ export const sharedNeed = (component) => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+/**
+ * The options that earn successes together with `disable`, and how many they need between them:
+ * every option in "any combination" mode, the options sharing its `group`, or just itself.
+ */
+export function poolOf(component, disable) {
+  const shared = sharedNeed(component);
+  if (shared != null) return { members: component.disables, need: shared };
+  if (!disable.group) return { members: [disable], need: needOf(disable) };
+  return {
+    members: component.disables.filter((d) => d.group === disable.group),
+    need: needOf(disable),
+  };
+}
+
+export const poolTotal = (members, progress) =>
+  members.reduce((sum, d) => sum + (progress?.[d.id] ?? 0), 0);
+
 /** Highest progress `disableId` may hold on an instance with this `progress`. */
 export function optionCap(component, progress, disableId) {
-  const shared = sharedNeed(component);
-  if (shared == null) {
-    return needOf(component.disables.find((d) => d.id === disableId) ?? {});
-  }
-  const own = progress?.[disableId] ?? 0;
-  return own + Math.max(0, shared - sumProgress(progress));
+  const disable = component.disables.find((d) => d.id === disableId);
+  if (!disable) return 1;
+  const { members, need } = poolOf(component, disable);
+  return (progress?.[disableId] ?? 0) + Math.max(0, need - poolTotal(members, progress));
 }
 
 /** Whether `progress` disables an instance of `component`. */
 export function meetsDisable(component, progress) {
-  const shared = sharedNeed(component);
-  if (shared != null)
-    return (component.disables ?? []).length > 0 && sumProgress(progress) >= shared;
-  return (component.disables ?? []).some((d) => (progress?.[d.id] ?? 0) >= needOf(d));
+  return (component.disables ?? []).some((d) => {
+    const { members, need } = poolOf(component, d);
+    return poolTotal(members, progress) >= need;
+  });
 }
 
 function freshProgress(component) {

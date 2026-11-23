@@ -109,6 +109,8 @@ export class PlanPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       label: '',
       traits: [],
       successesNeeded: 1,
+      group: null,
+      minRank: null,
     });
     this.render();
   }

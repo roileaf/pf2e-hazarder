@@ -26,7 +26,8 @@
           {{/if}}
           {{#if shared}}<div class="hz-shared" data-tooltip="{{shared.have}} / {{shared.need}}"><i class="fa-solid fa-shuffle"></i> {{shared.text}}</div>{{/if}}
           {{#each options}}
-            <div class="hz-option">
+            {{#if groupHead}}<div class="hz-shared hz-group-head" data-tooltip="{{groupHead.have}} / {{groupHead.need}}"><i class="fa-solid fa-shuffle"></i> {{groupHead.text}}</div>{{/if}}
+            <div class="hz-option {{#if grouped}}hz-grouped{{/if}}">
               {{#unless ../disabled}}
                 <button type="button" class="hz-roll" data-hz-action="disable" data-instance-key="{{../key}}" data-disable-id="{{disableId}}">
                   <i class="fa-solid fa-dice-d20"></i>

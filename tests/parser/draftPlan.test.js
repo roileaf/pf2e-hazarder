@@ -62,15 +62,16 @@ test('"twice" written right after a check is trusted: no warning', () => {
   expect(warnings).not.toContain('successes-heuristic');
 });
 
-test('a count shared across alternatives is a guess and warns', () => {
+test('a count after joined alternatives is one total between them, flagged for review', () => {
   const { plan, warnings } = draftPlan(
     hazard({
       routine: '(1 action)',
       disable: '@Check[nature|dc:20] or @Check[occultism|dc:20] twice to disperse',
     }),
   );
-  expect(plan.components[0].disables.map((d) => d.successesNeeded)).toEqual([2, 2]);
-  expect(warnings).toContain('successes-heuristic');
+  expect(plan.components[0].sharedSuccesses).toBe(2);
+  expect(plan.components[0].disables.map((d) => d.successesNeeded)).toEqual([1, 1]);
+  expect(warnings).toContain('shared-successes');
 });
 
 test('no routine text at all: no actions warning', () => {
@@ -204,23 +205,37 @@ test('"(1 action, illusion)" still parses', () => {
 });
 
 describe('multiplier shared across alternatives', () => {
-  const successes = (disable) =>
-    draftPlan(hazard({ routine: '(1 action)', disable })).plan.components[0].disables.map(
-      (d) => d.successesNeeded,
-    );
+  const component = (disable) =>
+    draftPlan(hazard({ routine: '(1 action)', disable })).plan.components[0];
+  const successes = (disable) => component(disable).disables.map((d) => d.successesNeeded);
 
   test('two alternatives, trailing twice', () => {
-    expect(successes('@Check[nature|dc:20] or @Check[occultism|dc:20] twice to disperse')).toEqual([
-      2, 2,
-    ]);
+    expect(
+      component('@Check[nature|dc:20] or @Check[occultism|dc:20] twice to disperse')
+        .sharedSuccesses,
+    ).toBe(2);
   });
 
   test('four alternatives with proficiency parenthetical, four times', () => {
-    expect(
-      successes(
-        '@Check[arcana|dc:25], @Check[nature|dc:25], @Check[occultism|dc:25], or @Check[religion|dc:25] (master) four times',
-      ),
-    ).toEqual([4, 4, 4, 4]);
+    const c = component(
+      '@Check[arcana|dc:25], @Check[nature|dc:25], @Check[occultism|dc:25], or @Check[religion|dc:25] (master) four times',
+    );
+    expect(c.sharedSuccesses).toBe(4);
+    expect(c.disables.map((d) => d.successesNeeded)).toEqual([1, 1, 1, 1]);
+  });
+
+  test('two sets of alternatives, each with its own count: two groups', () => {
+    const c = component(
+      '@Check[athletics|dc:44] (master) to force the gate, @Check[crafting|dc:41] or @Check[thievery|dc:41] (expert) twice to dismantle the lock, or @Check[games-lore|dc:34] (expert) or @Check[society|dc:36] (expert) five times to solve the puzzles',
+    );
+    expect(c.sharedSuccesses).toBeNull();
+    expect(c.disables.map((d) => [d.skill, d.successesNeeded, d.group])).toEqual([
+      ['athletics', 1, null],
+      ['crafting', 2, 'A'],
+      ['thievery', 2, 'A'],
+      ['games-lore', 5, 'B'],
+      ['society', 5, 'B'],
+    ]);
   });
 
   test('separated by prose, no sharing', () => {
@@ -344,16 +359,17 @@ describe('stated success counts without "any combination"', () => {
     expect(warnings).not.toContain('successes-heuristic');
   });
 
-  test('some of several options: each needs it, flagged as a guess', () => {
+  test('some of several options: they form a group with one total', () => {
     const { plan, warnings } = draft(
       'Three @Check[nature|dc:33] or @Check[occultism|dc:33] checks to clot the blood, a @Check[religion|dc:36] check to offer prayers',
     );
-    expect(opts(plan)).toEqual([
-      ['nature', 3],
-      ['occultism', 3],
-      ['religion', 1],
+    expect(plan.components[0].disables.map((d) => [d.skill, d.successesNeeded, d.group])).toEqual([
+      ['nature', 3, 'A'],
+      ['occultism', 3, 'A'],
+      ['religion', 1, null],
     ]);
-    expect(warnings).toContain('successes-heuristic');
+    expect(plan.components[0].sharedSuccesses).toBeNull();
+    expect(warnings).toContain('shared-successes');
   });
 
   test('"counts as two successes" is not a requirement', () => {

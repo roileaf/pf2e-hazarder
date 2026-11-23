@@ -167,10 +167,7 @@ const NOT_A_REQUIREMENT_RE = /\b(?:counts?\s+as|earns?|first|after|up\s+to|final
 const TIMES_BEFORE_RE = new RegExp(`\\b(?:twice|(${NUM})\\s+times)\\s+to\\s+$`, 'i');
 const COUNT_BEFORE_RE = new RegExp(`\\b(${NUM})\\s+(?:successful\\s+)?$`, 'i');
 
-/**
- * Who a stated success count applies to. One option → that option needs N. Every option → they
- * share one total of N. Some of several options → each needs N (a guess, flagged for review).
- */
+/** Stated success counts and the options (by index) each one speaks for. */
 function successRequirements(flat, checks, joined) {
   const found = [];
   const forward = (i) => {
@@ -307,25 +304,43 @@ export function draftPlan(source) {
     const successes = successesFor(disableText, checks);
     const ranks = ranksFor(disableText, checks);
     const counts = successes.counts;
-    let guessed = successes.inferred.some(Boolean);
+    const requirements = successRequirements(disableText, checks, joined);
+    // "@Check[a] or @Check[b] twice", or one check naming several skills "three times": the
+    // alternatives earn those successes between them.
+    for (let start = 0; start < checks.length;) {
+      let end = start;
+      while (end < checks.length - 1 && joined(end)) end++;
+      const run = Array.from({ length: end - start + 1 }, (_, k) => start + k);
+      const n = counts[end];
+      const together = run.some(
+        (i) => successes.inferred[i] || (i > start && checks[i].index === checks[i - 1].index),
+      );
+      if (run.length > 1 && n > 1 && together && run.every((i) => counts[i] === n)) {
+        for (const i of run) counts[i] = 1;
+        requirements.unshift({ n, group: run });
+      }
+      start = end + 1;
+    }
+    // In reading order, so group letters follow the text.
+    requirements.sort((a, b) => a.group[0] - b.group[0]);
+
+    // One option → it needs N. Every option → one shared total. Some of several → a group.
     let shared = checks.length > 1 ? parseSharedSuccesses(stripHtml(rawDisable)) : null;
-    for (const { n, group } of successRequirements(disableText, checks, joined)) {
+    const groups = checks.map(() => null);
+    let groupCount = 0;
+    for (const { n, group } of requirements) {
       if (!n || n < 2) continue;
       if (group.length > 1 && group.length === checks.length) {
         if (shared == null && counts.every((c) => c === 1)) shared = n;
         continue;
       }
-      if (shared != null) continue;
-      for (const i of group) if (counts[i] === 1) counts[i] = n;
-      if (group.length > 1) guessed = true;
+      if (shared != null || group.some((i) => counts[i] !== 1 || groups[i])) continue;
+      for (const i of group) counts[i] = n;
+      if (group.length > 1) {
+        const id = String.fromCharCode(65 + groupCount++);
+        for (const i of group) groups[i] = id;
+      }
     }
-    // One check naming several skills "three times" is three successes with any of them.
-    const oneCheck = checks.length > 1 && checks.every((c) => c.index === checks[0].index);
-    if (oneCheck && shared == null && counts[0] > 1 && counts.every((c) => c === counts[0])) {
-      shared = counts[0];
-      counts.fill(1);
-    }
-    if (guessed) warnings.push('successes-heuristic');
 
     checks.forEach((c, i) => {
       component.disables.push({
@@ -335,14 +350,13 @@ export function draftPlan(source) {
         label: c.label.replace(PROFICIENCY_RE, '').trim() || c.skill,
         traits: c.traits,
         successesNeeded: counts[i],
+        group: groups[i],
         minRank: ranks[i],
       });
     });
     if (!checks.length) warnings.push('no-disables');
-    if (shared != null) {
-      component.sharedSuccesses = shared;
-      warnings.push('shared-successes');
-    }
+    if (shared != null) component.sharedSuccesses = shared;
+    if (shared != null || groups.some(Boolean)) warnings.push('shared-successes');
 
     component.counteract = parseCounteracts(rawDisable)[0] ?? null;
 

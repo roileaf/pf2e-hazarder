@@ -1,5 +1,12 @@
 import { RANKS } from '../constants.js';
-import { actionsRemaining, instanceKey, optionCap, sharedNeed } from '../services/RulesEngine.js';
+import {
+  actionsRemaining,
+  instanceKey,
+  optionCap,
+  poolOf,
+  poolTotal,
+  sharedNeed,
+} from '../services/RulesEngine.js';
 
 const humanise = (slug) =>
   String(slug)
@@ -29,6 +36,21 @@ function buildActions(state, plan) {
   };
 }
 
+// Heads a group of options that earn successes together ("2 / 3 successes between Nature / Occultism").
+function groupHead(component, disable, progress) {
+  const { members, need } = poolOf(component, disable);
+  const have = Math.min(need, poolTotal(members, progress));
+  return {
+    have,
+    need,
+    text: game.i18n.format('PF2E_HAZARDER.Tracker.GroupTotal', {
+      have,
+      need,
+      skills: members.map((m) => skillLabel(m.skill)).join(' / '),
+    }),
+  };
+}
+
 function sharedView(progress, need) {
   const have = Math.min(
     need,
@@ -54,9 +76,13 @@ export function buildTrackerView({ name, plan, state, isGM }) {
         shared: shared != null ? sharedView(inst.progress, shared) : null,
         options: c.disables.map((d) => {
           const have = inst.progress?.[d.id] ?? 0;
-          // Shared pool: this option's own successes plus the slots still open to any option.
+          const grouped = shared == null && !!d.group;
+          // Pooled: this option's own successes plus the slots still open to its pool.
           const need =
-            shared != null ? optionCap(c, inst.progress, d.id) : (d.successesNeeded ?? 1);
+            shared != null || grouped
+              ? optionCap(c, inst.progress, d.id)
+              : (d.successesNeeded ?? 1);
+          const heads = grouped && c.disables.find((m) => m.group === d.group).id === d.id;
           const shownSkill = skillLabel(d.skill);
           return {
             disableId: d.id,
@@ -70,6 +96,8 @@ export function buildTrackerView({ name, plan, state, isGM }) {
             rankText: d.minRank
               ? game.i18n.localize(`PF2E_HAZARDER.Rank.${RANKS[d.minRank]}`)
               : null,
+            grouped,
+            groupHead: heads ? groupHead(c, d, inst.progress) : null,
             have,
             need,
             pips: Array.from({ length: need }, (_, i) => ({ filled: i < have })),

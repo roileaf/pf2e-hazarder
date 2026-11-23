@@ -432,3 +432,53 @@ test('a roll below the option minRank is ignored', () => {
   const crit = applyResult(s, ranked, r({ disableId: 'd1', rank: 1, degree: DEGREE.CRIT_FAIL }));
   expect(crit.state.status).toBe('active');
 });
+
+describe('a group of options with one total between them', () => {
+  // "Three Nature or Occultism checks, or one Religion check."
+  const grouped = {
+    actionsPerTurn: null,
+    components: [
+      {
+        id: 'c1',
+        name: 'blood',
+        count: 1,
+        actionsEach: 0,
+        disables: [
+          { id: 'd1', skill: 'nature', dc: 33, successesNeeded: 3, group: 'A' },
+          { id: 'd2', skill: 'occultism', dc: 33, successesNeeded: 3, group: 'A' },
+          { id: 'd3', skill: 'religion', dc: 36, successesNeeded: 1 },
+        ],
+      },
+    ],
+  };
+  const roll = (s, disableId, degree = DEGREE.SUCCESS) =>
+    applyResult(s, grouped, r({ disableId, degree })).state;
+
+  test('the group members add up; the option outside it stands alone', () => {
+    let s = activate(createInitialState(grouped));
+    s = roll(s, 'd1', DEGREE.CRIT_SUCCESS);
+    expect(s.instances[0].disabled).toBe(false);
+    s = roll(s, 'd2', DEGREE.CRIT_SUCCESS);
+    expect(s.instances[0].progress).toEqual({ d1: 2, d2: 1, d3: 0 });
+    expect(s.instances[0].disabled).toBe(true);
+  });
+
+  test('the lone option still disables on its own', () => {
+    let s = activate(createInitialState(grouped));
+    s = roll(s, 'd1');
+    s = roll(s, 'd3');
+    expect(s.instances[0].progress).toEqual({ d1: 1, d2: 0, d3: 1 });
+    expect(s.instances[0].disabled).toBe(true);
+  });
+
+  test('undo and override respect the group total', () => {
+    let s = activate(createInitialState(grouped));
+    s = roll(s, 'd1');
+    s = roll(s, 'd2', DEGREE.CRIT_SUCCESS);
+    s = undo(s, grouped);
+    expect(s.instances[0].disabled).toBe(false);
+    s = override(s, grouped, { instanceKey: 'c1:0', disableId: 'd2', progress: 9 }).state;
+    expect(s.instances[0].progress).toEqual({ d1: 1, d2: 2, d3: 0 });
+    expect(s.instances[0].disabled).toBe(true);
+  });
+});

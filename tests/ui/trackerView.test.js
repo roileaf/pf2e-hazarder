@@ -189,3 +189,37 @@ test('per-option mode has no shared total', () => {
   const v = buildTrackerView({ name: 'Wheel', plan, state, isGM: false });
   expect(v.components[0].instances[0].shared).toBeNull();
 });
+
+test('grouped options get one heading and pips for their open slots', () => {
+  const p = {
+    components: [
+      {
+        ...plan.components[0],
+        count: 1,
+        disables: [
+          { id: 'd1', skill: 'nature', dc: 33, label: 'nature', successesNeeded: 3, group: 'A' },
+          {
+            id: 'd2',
+            skill: 'occultism',
+            dc: 33,
+            label: 'occultism',
+            successesNeeded: 3,
+            group: 'A',
+          },
+          { id: 'd3', skill: 'religion', dc: 36, label: 'religion', successesNeeded: 1 },
+        ],
+      },
+    ],
+  };
+  const state = createInitialState(p);
+  state.instances[0].progress = { d1: 2, d2: 0, d3: 0 };
+  const inst = buildTrackerView({ name: 'Blood', plan: p, state, isGM: true }).components[0]
+    .instances[0];
+  expect(inst.shared).toBeNull();
+  expect(inst.options.map((o) => [o.grouped, !!o.groupHead, o.have, o.need])).toEqual([
+    [true, true, 2, 3],
+    [true, false, 0, 1],
+    [false, false, 0, 1],
+  ]);
+  expect(inst.options[0].groupHead).toMatchObject({ have: 2, need: 3 });
+});
