@@ -224,13 +224,16 @@ export function registerHooks(runner) {
     // Before initiative the tracker would just be buried under initiative rolls; it is posted
     // when combat starts. A hazard added mid-fight (it just triggered) gets it right away.
     await runner.startHazard(combatant.token, { tracker: !!combatant.combat?.started });
+    // Joining a running fight means it was just triggered; before that, combat start asks.
+    if (combatant.combat?.started) await runner.offerTriggerReaction(combatant.token);
   });
 
   Hooks.on('combatStart', async (combat) => {
     if (!runner.isWriter()) return;
-    for (const c of combat.combatants) {
-      if (c.actor?.type === 'hazard' && c.token) await runner.startHazard(c.token);
-    }
+    const hazards = combat.combatants.filter((c) => c.actor?.type === 'hazard' && c.token);
+    for (const c of hazards) await runner.startHazard(c.token);
+    // After every tracker is up, so the prompts don't hold them back.
+    for (const c of hazards) await runner.offerTriggerReaction(c.token);
   });
 
   Hooks.on('combatTurnChange', async (combat, prior, current) => {

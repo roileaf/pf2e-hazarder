@@ -379,3 +379,65 @@ test('a saving throw counts when the hazard lists that save as a disable option'
   expect(res.applied).toBe(true);
   expect(tokenDoc.state.instances[0].disabled).toBe(true);
 });
+
+describe('trigger reaction when a hazard enters an encounter', () => {
+  const origSettings = game.settings;
+  afterEach(() => {
+    game.settings = origSettings;
+  });
+  const withMode = (mode) => {
+    game.settings = { get: (_m, k) => (k === 'triggerReaction' ? mode : null) };
+    const s = setup();
+    s.ui.offerTriggerReaction = jest.fn(async () => true);
+    return s;
+  };
+
+  test('asks by default, and only once until the hazard is reset', async () => {
+    const { runner, tokenDoc, ui } = withMode(null);
+    expect(await runner.offerTriggerReaction(tokenDoc)).toBe(true);
+    expect(ui.offerTriggerReaction).toHaveBeenCalledWith(tokenDoc, plan, { ask: true });
+    expect(tokenDoc.state.triggerPosted).toBe(true);
+    expect(await runner.offerTriggerReaction(tokenDoc)).toBe(false);
+    expect(ui.offerTriggerReaction).toHaveBeenCalledTimes(1);
+    await runner.reset(tokenDoc);
+    expect(await runner.offerTriggerReaction(tokenDoc)).toBe(true);
+  });
+
+  test('"always" posts without asking; "never" does nothing', async () => {
+    const always = withMode('always');
+    await always.runner.offerTriggerReaction(always.tokenDoc);
+    expect(always.ui.offerTriggerReaction).toHaveBeenCalledWith(always.tokenDoc, plan, {
+      ask: false,
+    });
+    const never = withMode('never');
+    expect(await never.runner.offerTriggerReaction(never.tokenDoc)).toBe(false);
+    expect(never.ui.offerTriggerReaction).not.toHaveBeenCalled();
+  });
+
+  test('a declined prompt can be offered again; no reaction or a non-writer is skipped', async () => {
+    const declined = withMode('ask');
+    declined.ui.offerTriggerReaction = jest.fn(async () => false);
+    expect(await declined.runner.offerTriggerReaction(declined.tokenDoc)).toBe(false);
+    expect(declined.tokenDoc.state.triggerPosted).toBe(false);
+
+    game.settings = { get: () => null };
+    const none = setup({ plan: { ...plan, reactionItemId: null } });
+    none.ui.offerTriggerReaction = jest.fn();
+    expect(await none.runner.offerTriggerReaction(none.tokenDoc)).toBe(false);
+    const player = setup({ writer: false });
+    player.ui.offerTriggerReaction = jest.fn();
+    expect(await player.runner.offerTriggerReaction(player.tokenDoc)).toBe(false);
+    expect(none.ui.offerTriggerReaction).not.toHaveBeenCalled();
+    expect(player.ui.offerTriggerReaction).not.toHaveBeenCalled();
+  });
+
+  test('a reaction posted from the critical-failure prompt is not offered again', async () => {
+    const { runner, tokenDoc, ui } = withMode('ask');
+    ui.showTriggered = jest.fn(async () => true);
+    await runner.handleCheckMessage(msg(ctx({ outcome: 'criticalFailure' })));
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tokenDoc.state.triggerPosted).toBe(true);
+    expect(await runner.offerTriggerReaction(tokenDoc)).toBe(false);
+  });
+});

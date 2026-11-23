@@ -131,12 +131,41 @@ export class HazardRunner {
       await this.ui.upsertTracker(tokenDoc);
       return { events, plan };
     });
-    if (events.some((e) => e.type === 'hazardTriggered')) {
-      Promise.resolve()
-        .then(() => this.ui.showTriggered(tokenDoc, plan))
-        .catch((err) => console.error('pf2e-hazarder |', err));
-    }
+    if (events.some((e) => e.type === 'hazardTriggered')) this.#promptTriggered(tokenDoc, plan);
     return events;
+  }
+
+  // Not awaited: the prompt must not hold up the roll that caused it.
+  #promptTriggered(tokenDoc, plan) {
+    Promise.resolve()
+      .then(() => this.ui.showTriggered(tokenDoc, plan))
+      .then((posted) => posted && this.#markTriggerPosted(tokenDoc))
+      .catch((err) => console.error('pf2e-hazarder |', err));
+  }
+
+  #markTriggerPosted(tokenDoc) {
+    return this.#enqueue(tokenDoc, async () => {
+      const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
+      const state = this.store.getOrCreateState(tokenDoc, plan);
+      await this.store.setState(tokenDoc, { ...state, triggerPosted: true });
+    });
+  }
+
+  /**
+   * A hazard entering an encounter has just been triggered: offer the reaction that goes with it,
+   * once per arming (a reset re-arms it). World setting: ask, always post, or never.
+   */
+  async offerTriggerReaction(tokenDoc) {
+    if (!this.isWriter()) return false;
+    const mode = game.settings.get(MODULE_ID, 'triggerReaction') ?? 'ask';
+    if (mode === 'never') return false;
+    const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
+    if (!plan.reactionItemId) return false;
+    const state = this.store.getOrCreateState(tokenDoc, plan);
+    if (state.triggerPosted || state.status === STATUS.DISABLED) return false;
+    const posted = await this.ui.offerTriggerReaction(tokenDoc, plan, { ask: mode !== 'always' });
+    if (posted) await this.#markTriggerPosted(tokenDoc);
+    return !!posted;
   }
 
   #warnRank(events, plan, r) {
@@ -222,10 +251,6 @@ export class HazardRunner {
       await this.ui.upsertTracker(tokenDoc);
       return { events, plan };
     })) ?? { events: [] };
-    if (events.some((e) => e.type === 'hazardTriggered')) {
-      Promise.resolve()
-        .then(() => this.ui.showTriggered(tokenDoc, plan))
-        .catch((err) => console.error('pf2e-hazarder |', err));
-    }
+    if (events.some((e) => e.type === 'hazardTriggered')) this.#promptTriggered(tokenDoc, plan);
   }
 }

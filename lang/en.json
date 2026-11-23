@@ -20,6 +20,13 @@
       "EnforceProficiency": {
         "Name": "Enforce proficiency requirements",
         "Hint": "Disable options marked e.g. \"(master)\" can only be attempted by characters with at least that rank in the skill. Under-ranked rolls are blocked from the tracker and not counted from chat."
+      },
+      "TriggerReaction": {
+        "Name": "Hazard's reaction when it enters an encounter",
+        "Hint": "A complex hazard uses its reaction when triggered, then rolls initiative. When a hazard starts or joins combat, Hazarder can post that reaction: ask the GM first, always post it, or leave it to the GM. It is offered once until the hazard is reset.",
+        "Ask": "Ask the GM",
+        "Always": "Always post it",
+        "Never": "Never"
       }
     },
     "Status": {
@@ -125,6 +132,10 @@
       "expert": "Expert",
       "master": "Master",
       "legendary": "Legendary"
+    },
+    "Trigger": {
+      "Title": "{name} is triggered",
+      "Body": "{name} enters the encounter. Post its reaction, <strong>{reaction}</strong>?"
     }
   }
 }

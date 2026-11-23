@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 (prerelease)
+
+- **Trigger reaction when a hazard enters an encounter:** a complex hazard uses its reaction when triggered, then rolls initiative. When combat starts with a hazard in it, or a hazard joins a running combat, the GM is asked whether to post that reaction. It is offered once until the hazard is reset, and not again if it was already posted after a critical failure. New world setting: ask (default), always post, or never.
+
 ## 0.1.5 (prerelease)
 
 - **Turn card lists every ability:** passive abilities now appear (with their description and save buttons) and cost no actions; ticking one under "Shown on the turn card" in the plan used to do nothing. Reactions that fire during the fight (when the hazard breaks, when a disable fails) are listed too. The reaction that starts the hazard ("…rolls initiative") stays out by default and is the one offered on a critical failure, even when it isn't the hazard's first reaction.

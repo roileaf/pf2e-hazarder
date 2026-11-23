@@ -20,6 +20,19 @@ export function registerSettings() {
     hint: 'PF2E_HAZARDER.Settings.RemoveDisabled.Hint',
     default: false,
   });
+  game.settings.register(MODULE_ID, 'triggerReaction', {
+    scope: 'world',
+    config: true,
+    type: String,
+    name: 'PF2E_HAZARDER.Settings.TriggerReaction.Name',
+    hint: 'PF2E_HAZARDER.Settings.TriggerReaction.Hint',
+    choices: {
+      ask: 'PF2E_HAZARDER.Settings.TriggerReaction.Ask',
+      always: 'PF2E_HAZARDER.Settings.TriggerReaction.Always',
+      never: 'PF2E_HAZARDER.Settings.TriggerReaction.Never',
+    },
+    default: 'ask',
+  });
   game.settings.register(MODULE_ID, 'enforceProficiency', {
     ...common,
     name: 'PF2E_HAZARDER.Settings.EnforceProficiency.Name',

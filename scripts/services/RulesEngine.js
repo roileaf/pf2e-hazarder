@@ -86,6 +86,9 @@ export function createInitialState(plan) {
     status: STATUS.ARMED,
     instances: buildInstances(plan),
     history: [],
+    // Written out, not left absent: saving state merges into the token flag, so a reset must
+    // overwrite the old value.
+    triggerPosted: false,
   };
 }
 
