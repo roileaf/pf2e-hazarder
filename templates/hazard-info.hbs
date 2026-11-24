@@ -1,0 +1,20 @@
+<div class="hz-sheet hz-gm">
+  {{#if defenses.length}}
+    <div class="hz-defenses">
+      {{#each defenses}}<span class="hz-def"><span class="hz-def-label">{{label}}</span><span class="hz-def-value">{{value}}</span></span>{{/each}}
+    </div>
+  {{/if}}
+  {{#if iwr.length}}
+    <div class="hz-iwr-list">
+      {{#each iwr}}<div class="hz-iwr"><span class="hz-iwr-label">{{label}}</span><span class="hz-iwr-value">{{value}}</span></div>{{/each}}
+    </div>
+  {{/if}}
+  {{#if hasDetails}}
+    <details class="hz-details">
+      <summary>{{localize "PF2E_HAZARDER.Info.Details"}}</summary>
+      {{#if meta}}<div class="hz-meta">{{meta}}</div>{{/if}}
+      {{#if stealth}}<div class="hz-detail"><span class="hz-iwr-label">{{localize "PF2E_HAZARDER.Info.Stealth"}}</span> {{stealth}}{{#if stealthHtml}} {{{stealthHtml}}}{{/if}}</div>{{/if}}
+      {{#each sections}}<div class="hz-detail"><span class="hz-iwr-label">{{label}}</span> {{{html}}}</div>{{/each}}
+    </details>
+  {{/if}}
+</div>

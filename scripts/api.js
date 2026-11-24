@@ -1,8 +1,13 @@
 import * as store from './stores/hazardStore.js';
 import { HazardRunner, defaultCandidates } from './services/HazardRunner.js';
 import { hazardSnapshot } from './services/hazardSnapshot.js';
-import { disableEligibility, rollDisable, upsertTracker } from './ui/TrackerCard.js';
-import { offerTriggerReaction, showTriggered } from './ui/TriggeredPrompt.js';
+import {
+  disableEligibility,
+  refreshTracker,
+  rollDisable,
+  upsertTracker,
+} from './ui/TrackerCard.js';
+import { confirmHpDisable, offerTriggerReaction, showTriggered } from './ui/TriggeredPrompt.js';
 import { PlanPanel } from './ui/PlanPanel.js';
 
 export function createRunner() {
@@ -15,6 +20,8 @@ export function createRunner() {
     store,
     ui: {
       upsertTracker,
+      refreshTracker,
+      confirmHpDisable,
       showTriggered,
       offerTriggerReaction,
       notify: (t) => ui.notifications.info(t),

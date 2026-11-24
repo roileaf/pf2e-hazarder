@@ -64,6 +64,9 @@ function sharedView(progress, need) {
 }
 
 export function buildTrackerView({ name, plan, state, isGM }) {
+  // A hazard that is one thing gets its "destroyed" toggle in the footer; one with several parts
+  // gets a toggle on each part.
+  const solo = state.instances.length === 1 ? state.instances[0] : null;
   const components = plan.components.map((c) => {
     const shared = sharedNeed(c);
     const instances = state.instances
@@ -73,6 +76,10 @@ export function buildTrackerView({ name, plan, state, isGM }) {
         label: c.count > 1 ? `${c.name} ${inst.index + 1}` : c.name,
         showLabel: c.count > 1,
         disabled: inst.disabled,
+        showToggle: !solo,
+        hasRow: c.count > 1 || inst.disabled || !solo,
+        // A header row that exists only for the GM's toggle is dropped for players.
+        gmOnlyRow: !(c.count > 1 || inst.disabled),
         shared: shared != null ? sharedView(inst.progress, shared) : null,
         options: c.disables.map((d) => {
           const have = inst.progress?.[d.id] ?? 0;
@@ -127,6 +134,7 @@ export function buildTrackerView({ name, plan, state, isGM }) {
     actions: buildActions(state, plan),
     empty: plan.components.every((c) => c.disables.length === 0),
     components,
+    solo: solo ? { key: instanceKey(solo.componentId, solo.index), disabled: solo.disabled } : null,
     isGM,
   };
 }

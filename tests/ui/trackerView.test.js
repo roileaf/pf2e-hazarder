@@ -223,3 +223,22 @@ test('grouped options get one heading and pips for their open slots', () => {
   ]);
   expect(inst.options[0].groupHead).toMatchObject({ have: 2, need: 3 });
 });
+
+test('the "destroyed" toggle: footer for a single thing, per part otherwise', () => {
+  const one = { components: [{ ...plan.components[0], count: 1 }] };
+  const v1 = buildTrackerView({
+    name: 'Wheel',
+    plan: one,
+    state: createInitialState(one),
+    isGM: true,
+  });
+  expect(v1.solo).toEqual({ key: 'c1:0', disabled: false });
+  expect(v1.components[0].instances[0]).toMatchObject({ showToggle: false, hasRow: false });
+
+  const v2 = buildTrackerView({ name: 'Wheel', plan, state: createInitialState(plan), isGM: true });
+  expect(v2.solo).toBeNull();
+  expect(v2.components[0].instances.map((i) => [i.showToggle, i.hasRow])).toEqual([
+    [true, true],
+    [true, true],
+  ]);
+});

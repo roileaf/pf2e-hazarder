@@ -4,6 +4,7 @@ import { actionsRemaining } from '../services/RulesEngine.js';
 import { getSystemFlags } from '../systemCompat.js';
 import { getOrCreateState, getOrDraftPlan } from '../stores/hazardStore.js';
 import { buildSaveRequest, toolbeltTargetHelper } from '../integrations/toolbelt.js';
+import { renderHazardInfo } from './HazardInfo.js';
 import { extractSaves, splitRoutine } from './routineParts.js';
 import { buildTurnView } from './turnView.js';
 
@@ -83,6 +84,7 @@ export async function postTurnCard(combatant) {
   const content = await render(`modules/${MODULE_ID}/templates/turn-card.hbs`, {
     ...view,
     tokenUuid: tokenDoc.uuid,
+    infoHtml: await renderHazardInfo(actor, { liveHp: true }),
   });
   await collapsePreviousTurnCard(tokenDoc);
   const gmIds = game.users.filter((u) => u.isGM).map((u) => u.id);

@@ -49,7 +49,9 @@
       "PostCheck": "Post this check to chat",
       "AnyCombination": "{have} / {need} successes, any combination",
       "RankTooLow": "{actor} needs {rank} proficiency in {skill}; the check does not count.",
-      "GroupTotal": "{have} / {need} successes between {skills}"
+      "GroupTotal": "{have} / {need} successes between {skills}",
+      "MarkDestroyed": "Mark as destroyed or disabled",
+      "Restore": "Restore (not disabled)"
     },
     "Turn": {
       "Title": "{name}'s turn",
@@ -143,6 +145,39 @@
       "Target": "Target",
       "RollStrike": "Roll Strike",
       "LaterStrike": "Later"
+    },
+    "Info": {
+      "AC": "AC",
+      "Save": {
+        "fortitude": "Fort",
+        "reflex": "Ref",
+        "will": "Will"
+      },
+      "Hardness": "Hardness",
+      "HP": "HP",
+      "BT": "BT",
+      "Immunities": "Immunities",
+      "Weaknesses": "Weaknesses",
+      "Resistances": "Resistances",
+      "Stealth": "Stealth",
+      "Description": "Description",
+      "Disable": "Disable",
+      "Reset": "Reset",
+      "Details": "Details",
+      "Level": "Hazard {level}",
+      "HpNotes": "HP notes"
+    },
+    "Hud": {
+      "Trigger": "Trigger hazard: post its reaction",
+      "Tracker": "Post the disable tracker to chat",
+      "NoReaction": "{name} has no reaction to post."
+    },
+    "Hp": {
+      "BrokenTitle": "{name} is broken",
+      "BrokenBody": "{name} is at {hp} HP, at or below its Broken Threshold of {threshold}. Mark it disabled?",
+      "DestroyedTitle": "{name} is destroyed",
+      "DestroyedBody": "{name} has been reduced to 0 HP. Mark it disabled?",
+      "Disable": "Mark disabled"
     }
   }
 }

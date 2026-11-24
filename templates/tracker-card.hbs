@@ -16,13 +16,14 @@
       {{#if showHeading}}<h4 class="hz-component-name">{{name}}</h4>{{/if}}
       {{#each instances}}
         <div class="hz-instance {{#if disabled}}disabled{{/if}}" data-instance-key="{{key}}">
-          {{#if showLabel}}
-            <div class="hz-instance-label">
+          {{#if hasRow}}
+          <div class="hz-instance-label {{#if gmOnlyRow}}hz-gm-row{{/if}}">
+            <span class="hz-instance-name">
               {{#if disabled}}<i class="fa-solid fa-check"></i>{{/if}}
-              {{label}}
-            </div>
-          {{else if disabled}}
-            <div class="hz-instance-label"><i class="fa-solid fa-check"></i> {{localize "PF2E_HAZARDER.Status.disabled"}}</div>
+              {{#if showLabel}}{{label}}{{else if disabled}}{{localize "PF2E_HAZARDER.Status.disabled"}}{{/if}}
+            </span>
+            {{#if showToggle}}{{#if ../../isGM}}<span class="hz-gm hz-part-tools"><button type="button" class="hz-icon-btn hz-destroy" data-hz-action="toggle-disabled" data-instance-key="{{key}}" data-tooltip="{{#if disabled}}{{localize 'PF2E_HAZARDER.Tracker.Restore'}}{{else}}{{localize 'PF2E_HAZARDER.Tracker.MarkDestroyed'}}{{/if}}" aria-label="{{#if disabled}}{{localize 'PF2E_HAZARDER.Tracker.Restore'}}{{else}}{{localize 'PF2E_HAZARDER.Tracker.MarkDestroyed'}}{{/if}}"><i class="fa-solid {{#if disabled}}fa-rotate-left{{else}}fa-hammer{{/if}}"></i></button></span>{{/if}}{{/if}}
+          </div>
           {{/if}}
           {{#if shared}}<div class="hz-shared" data-tooltip="{{shared.have}} / {{shared.need}}"><i class="fa-solid fa-shuffle"></i> {{shared.text}}</div>{{/if}}
           {{#each options}}
@@ -57,8 +58,10 @@
       {{/if}}
     </section>
   {{/each}}
+  {{#if infoHtml}}{{{infoHtml}}}{{/if}}
   {{#if isGM}}
     <footer class="hz-gm">
+      {{#if solo}}<button type="button" class="hz-icon-btn hz-destroy" data-hz-action="toggle-disabled" data-instance-key="{{solo.key}}" data-tooltip="{{#if solo.disabled}}{{localize 'PF2E_HAZARDER.Tracker.Restore'}}{{else}}{{localize 'PF2E_HAZARDER.Tracker.MarkDestroyed'}}{{/if}}" aria-label="{{#if solo.disabled}}{{localize 'PF2E_HAZARDER.Tracker.Restore'}}{{else}}{{localize 'PF2E_HAZARDER.Tracker.MarkDestroyed'}}{{/if}}"><i class="fa-solid {{#if solo.disabled}}fa-rotate-left{{else}}fa-hammer{{/if}}"></i></button>{{/if}}
       <button type="button" class="hz-icon-btn" data-hz-action="undo" data-tooltip="{{localize 'PF2E_HAZARDER.Tracker.Undo'}}" aria-label="{{localize 'PF2E_HAZARDER.Tracker.Undo'}}"><i class="fa-solid fa-rotate-left"></i></button>
       <button type="button" class="hz-icon-btn" data-hz-action="reset" data-tooltip="{{localize 'PF2E_HAZARDER.Tracker.Reset'}}" aria-label="{{localize 'PF2E_HAZARDER.Tracker.Reset'}}"><i class="fa-solid fa-arrows-rotate"></i></button>
       <button type="button" class="hz-icon-btn" data-hz-action="plan" data-tooltip="{{localize 'PF2E_HAZARDER.Tracker.EditPlan'}}" aria-label="{{localize 'PF2E_HAZARDER.Tracker.EditPlan'}}"><i class="fa-solid fa-pen-to-square"></i></button>

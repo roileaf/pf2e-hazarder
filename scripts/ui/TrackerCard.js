@@ -7,6 +7,7 @@ import {
   getTrackerMessageId,
   setTrackerMessageId,
 } from '../stores/hazardStore.js';
+import { renderHazardInfo } from './HazardInfo.js';
 import { buildTrackerView, skillLabel } from './trackerView.js';
 
 const TEMPLATE = `modules/${MODULE_ID}/templates/tracker-card.hbs`;
@@ -18,7 +19,17 @@ export async function renderTrackerContent(tokenDoc) {
   return foundry.applications.handlebars.renderTemplate(TEMPLATE, {
     ...view,
     tokenUuid: tokenDoc.uuid,
+    // GM-only block (stripped for players on render), re-rendered when the hazard's HP changes.
+    infoHtml: await renderHazardInfo(tokenDoc.actor, { liveHp: true }),
   });
+}
+
+/** Re-render the hazard's tracker if it has one in chat; never posts a new one. */
+export async function refreshTracker(tokenDoc) {
+  const existing = game.messages.get(getTrackerMessageId(tokenDoc) ?? '');
+  if (!existing) return null;
+  await existing.update({ content: await renderTrackerContent(tokenDoc) });
+  return existing;
 }
 
 export async function upsertTracker(tokenDoc) {

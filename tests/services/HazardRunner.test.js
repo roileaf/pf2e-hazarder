@@ -441,3 +441,112 @@ describe('trigger reaction when a hazard enters an encounter', () => {
     expect(await runner.offerTriggerReaction(tokenDoc)).toBe(false);
   });
 });
+
+describe('running a hazard by hand', () => {
+  const two = {
+    ...plan,
+    components: [{ ...plan.components[0], count: 2 }],
+  };
+
+  test('toggleDisabled marks one part destroyed, and puts it back', async () => {
+    const { runner, tokenDoc, ui } = setup({ plan: two });
+    await runner.toggleDisabled(tokenDoc, 'c1:0');
+    expect(tokenDoc.state.instances.map((i) => i.disabled)).toEqual([true, false]);
+    expect(tokenDoc.state.status).toBe('active');
+    await runner.toggleDisabled(tokenDoc, 'c1:1');
+    expect(tokenDoc.state.status).toBe('disabled');
+    expect(ui.notify).toHaveBeenCalled();
+    await runner.toggleDisabled(tokenDoc, 'c1:0');
+    expect(tokenDoc.state.instances[0].disabled).toBe(false);
+    expect(tokenDoc.state.status).toBe('active');
+  });
+
+  test('showTracker posts the tracker and leaves the hazard armed', async () => {
+    const { runner, tokenDoc, ui } = setup();
+    tokenDoc.state = createInitialState(plan);
+    await runner.showTracker(tokenDoc);
+    expect(tokenDoc.state.status).toBe('armed');
+    expect(ui.upsertTracker).toHaveBeenCalledWith(tokenDoc);
+  });
+
+  test('trigger sets it off and posts the reaction without asking, even when set to "never"', async () => {
+    const orig = game.settings;
+    game.settings = { get: (_m, k) => (k === 'triggerReaction' ? 'never' : null) };
+    try {
+      const { runner, tokenDoc, ui } = setup();
+      tokenDoc.state = createInitialState(plan);
+      ui.offerTriggerReaction = jest.fn(async () => true);
+      expect(await runner.trigger(tokenDoc)).toBe(true);
+      expect(ui.offerTriggerReaction).toHaveBeenCalledWith(tokenDoc, plan, { ask: false });
+      expect(tokenDoc.state.status).toBe('triggered');
+      expect(tokenDoc.state.triggerPosted).toBe(true);
+    } finally {
+      game.settings = orig;
+    }
+  });
+
+  test('trigger with no reaction warns', async () => {
+    const { runner, tokenDoc, ui } = setup({ plan: { ...plan, reactionItemId: null } });
+    ui.warn = jest.fn();
+    ui.offerTriggerReaction = jest.fn();
+    expect(await runner.trigger(tokenDoc)).toBe(false);
+    expect(ui.warn).toHaveBeenCalledWith('PF2E_HAZARDER.Hud.NoReaction');
+    expect(ui.offerTriggerReaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('hit points', () => {
+  const tracked = (hp, flag) => {
+    const s = setup({ plan: { ...plan, components: [{ ...plan.components[0], count: 2 }] } });
+    s.tokenDoc.actor = { system: { attributes: { hp } } };
+    s.tokenDoc.flags = flag ? { hpStage: flag } : {};
+    s.tokenDoc.getFlag = (_m, k) => s.tokenDoc.flags[k];
+    s.tokenDoc.setFlag = jest.fn(async (_m, k, v) => {
+      s.tokenDoc.flags[k] = v;
+    });
+    s.store.getState = (t) => structuredClone(t.state);
+    s.ui.refreshTracker = jest.fn();
+    s.ui.confirmHpDisable = jest.fn(async () => true);
+    return s;
+  };
+
+  test('reaching the Broken Threshold asks, and a yes disables every part', async () => {
+    const { runner, tokenDoc, ui } = tracked({ value: 30, max: 60 });
+    await runner.handleHpChange(tokenDoc);
+    expect(ui.confirmHpDisable).toHaveBeenCalledWith(tokenDoc, 'broken');
+    expect(tokenDoc.flags.hpStage).toBe('broken');
+    expect(tokenDoc.state.instances.every((i) => i.disabled)).toBe(true);
+    expect(tokenDoc.state.status).toBe('disabled');
+    expect(ui.refreshTracker).toHaveBeenCalled();
+  });
+
+  test('a "no" leaves it running and is not asked again at the same stage', async () => {
+    const { runner, tokenDoc, ui } = tracked({ value: 30, max: 60 });
+    ui.confirmHpDisable = jest.fn(async () => false);
+    await runner.handleHpChange(tokenDoc);
+    tokenDoc.actor.system.attributes.hp.value = 20;
+    await runner.handleHpChange(tokenDoc);
+    expect(ui.confirmHpDisable).toHaveBeenCalledTimes(1);
+    expect(tokenDoc.state.status).toBe('active');
+    tokenDoc.actor.system.attributes.hp.value = 0;
+    await runner.handleHpChange(tokenDoc);
+    expect(ui.confirmHpDisable).toHaveBeenLastCalledWith(tokenDoc, 'destroyed');
+  });
+
+  test('healing, small damage and untracked tokens do not ask', async () => {
+    const healed = tracked({ value: 50, max: 60 }, 'broken');
+    await healed.runner.handleHpChange(healed.tokenDoc);
+    expect(healed.ui.confirmHpDisable).not.toHaveBeenCalled();
+    expect(healed.tokenDoc.flags.hpStage).toBe('ok');
+
+    const scratched = tracked({ value: 55, max: 60 });
+    await scratched.runner.handleHpChange(scratched.tokenDoc);
+    expect(scratched.ui.confirmHpDisable).not.toHaveBeenCalled();
+    expect(scratched.ui.refreshTracker).toHaveBeenCalled();
+
+    const untracked = tracked({ value: 0, max: 60 });
+    untracked.store.getState = () => null;
+    await untracked.runner.handleHpChange(untracked.tokenDoc);
+    expect(untracked.ui.confirmHpDisable).not.toHaveBeenCalled();
+  });
+});

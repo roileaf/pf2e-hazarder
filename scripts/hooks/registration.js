@@ -19,6 +19,7 @@ import {
   spendFromMessage,
 } from '../ui/TurnCard.js';
 import { decorateCombatTracker } from '../ui/combatTrackerPool.js';
+import { decorateTokenHud } from '../ui/tokenHud.js';
 import { decorateTurnCard, nextSpent } from '../ui/turnCardDom.js';
 import { extractSaves } from '../ui/routineParts.js';
 import { buildCheckRequest } from '../ui/checkRequest.js';
@@ -175,6 +176,7 @@ async function onCardClick(runner, event) {
   if (action === 'tracker') return repostTracker(runner, tokenDoc);
   if (action === 'pip')
     return runner.overridePip(tokenDoc, el.dataset.instanceKey, el.dataset.disableId);
+  if (action === 'toggle-disabled') return runner.toggleDisabled(tokenDoc, el.dataset.instanceKey);
   if (action === 'undo') return runner.undo(tokenDoc);
   if (action === 'reset') {
     const resetText = getPlan(tokenDoc.actor)?.resetText ?? '';
@@ -293,7 +295,7 @@ export function registerHooks(runner) {
 
   Hooks.on('renderChatMessageHTML', (message, html) => {
     if (!game.user.isGM) {
-      html.querySelectorAll('.hz-gm').forEach((el) => el.remove());
+      html.querySelectorAll('.hz-gm, .hz-gm-row').forEach((el) => el.remove());
       // Respect pf2e's "show DCs to players" metagame setting (tracker content is rendered by the GM).
       if (game.pf2e?.settings?.metagame?.dcs === false) {
         html.querySelectorAll('.hz-dc').forEach((el) => el.remove());
@@ -325,6 +327,24 @@ export function registerHooks(runner) {
       icon: 'fa-solid fa-list-check',
       onclick: () => PlanPanel.open(sheet.actor),
     });
+  });
+
+  Hooks.on('renderTokenHUD', (hud, html) => decorateTokenHud(runner, hud, html));
+
+  // Damage and repairs. A linked hazard's hit points live on the actor (every token of it on the
+  // viewed scene follows); an unlinked token's live in its own delta.
+  const hpChanged = (changes) => foundry.utils.hasProperty(changes, 'system.attributes.hp');
+  Hooks.on('updateActor', async (actor, changes) => {
+    if (!runner.isWriter() || actor.type !== 'hazard' || !hpChanged(changes)) return;
+    const tokens = actor.isToken
+      ? [actor.token]
+      : (canvas.scene?.tokens?.filter((t) => t.actorLink && t.actorId === actor.id) ?? []);
+    for (const t of tokens) if (t) await runner.handleHpChange(t);
+  });
+  Hooks.on('updateActorDelta', async (delta, changes) => {
+    if (!runner.isWriter() || !hpChanged(changes)) return;
+    const tokenDoc = delta.parent;
+    if (tokenDoc?.actor?.type === 'hazard') await runner.handleHpChange(tokenDoc);
   });
 
   Hooks.on('updateActor', async (actor, changes) => {

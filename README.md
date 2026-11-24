@@ -11,6 +11,9 @@ Run Pathfinder 2e and Starfinder 2e complex hazards in Foundry VTT v14 — the r
 - **States** — armed, triggered, active, disabled and reset. Critical failures prompt the GM to post the hazard's reaction; disabled hazards can skip their turn or leave combat.
 - **PF2e Toolbelt** — when its Target Helper is active, save requests from the turn card carry the current targets.
 
+- **No sheet needed** — the GM's cards carry the hazard's defenses (AC, saves, Hardness, HP, Broken Threshold, immunities, weaknesses, resistances) and a Details fold with Stealth, description, the full disable text and reset. The tracker follows the hazard's hit points and asks whether it is disabled when it breaks or is destroyed; each part can be marked destroyed by hand.
+- **Outside combat** — a hazard token's HUD has GM buttons to trigger it (posting its reaction) or to post its disable tracker while it stays armed.
+
 ## Usage
 
 Add a complex hazard to combat and run combat as normal. Review the plan if asked. GMs can open the plan from the hazard sheet header (**Hazard Plan**) or with `game.modules.get('pf2e-hazarder').api.openPlan(actor)`.

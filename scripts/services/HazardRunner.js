@@ -1,6 +1,7 @@
 import { MODULE_ID, OUTCOME_TO_DEGREE, RANKS, STATUS } from '../constants.js';
 import { getSystemFlags } from '../systemCompat.js';
 import * as Engine from './RulesEngine.js';
+import { hpStage, stageWorsened } from './hpStage.js';
 import { extractCheck, matchCheck } from './RollMatcher.js';
 import { skillLabel } from '../ui/trackerView.js';
 
@@ -224,6 +225,103 @@ export class HazardRunner {
       );
       await this.ui.upsertTracker(tokenDoc);
     });
+  }
+
+  /** GM marks one part destroyed or disabled outright (or puts it back). */
+  async toggleDisabled(tokenDoc, instanceKey) {
+    return this.#enqueue(tokenDoc, async () => {
+      const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
+      const state = this.store.getOrCreateState(tokenDoc, plan);
+      const inst = state.instances.find(
+        (i) => Engine.instanceKey(i.componentId, i.index) === instanceKey,
+      );
+      if (!inst) return;
+      const { state: next, events } = Engine.override(state, plan, {
+        instanceKey,
+        disabled: !inst.disabled,
+      });
+      await this.store.setState(tokenDoc, next);
+      await this.#afterEvents(tokenDoc, events);
+      await this.ui.upsertTracker(tokenDoc);
+    });
+  }
+
+  /** Every part at once: the hazard as a whole was broken or destroyed. */
+  async disableAll(tokenDoc) {
+    return this.#enqueue(tokenDoc, async () => {
+      const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
+      let state = this.store.getOrCreateState(tokenDoc, plan);
+      const events = [];
+      for (const inst of state.instances.filter((i) => !i.disabled)) {
+        const result = Engine.override(state, plan, {
+          instanceKey: Engine.instanceKey(inst.componentId, inst.index),
+          disabled: true,
+        });
+        state = result.state;
+        events.push(...result.events);
+      }
+      await this.store.setState(tokenDoc, state);
+      await this.#afterEvents(tokenDoc, events);
+      await this.ui.upsertTracker(tokenDoc);
+    });
+  }
+
+  /**
+   * Outside an encounter: put the disable tracker in chat without setting the hazard off. It stays
+   * armed; a critical failure on a check still triggers it.
+   */
+  async showTracker(tokenDoc) {
+    return this.#enqueue(tokenDoc, async () => {
+      const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
+      await this.store.setState(tokenDoc, this.store.getOrCreateState(tokenDoc, plan));
+      await this.ui.upsertTracker(tokenDoc);
+    });
+  }
+
+  /**
+   * The GM sets the hazard off by hand (someone walked into it): it becomes triggered and its
+   * reaction is posted, with whatever that reaction needs. A simple hazard is nothing more.
+   */
+  async trigger(tokenDoc) {
+    if (!this.isWriter()) return false;
+    const { plan } = await this.#enqueue(tokenDoc, async () => {
+      const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
+      const state = this.store.getOrCreateState(tokenDoc, plan);
+      const armed = state.status === STATUS.ARMED || state.status === STATUS.RESET;
+      await this.store.setState(tokenDoc, armed ? { ...state, status: STATUS.TRIGGERED } : state);
+      await this.ui.refreshTracker?.(tokenDoc);
+      return { plan };
+    });
+    if (!plan.reactionItemId) {
+      this.ui.warn?.(game.i18n.format('PF2E_HAZARDER.Hud.NoReaction', { name: tokenDoc.name }));
+      return false;
+    }
+    const posted = await this.ui.offerTriggerReaction(tokenDoc, plan, { ask: false });
+    if (posted) await this.#markTriggerPosted(tokenDoc);
+    return !!posted;
+  }
+
+  #hpChecks = new Set();
+
+  /**
+   * The hazard took damage or was repaired: refresh its tracker's hit points, and when damage
+   * takes it to its Broken Threshold or to 0, ask the GM whether that disables it.
+   */
+  async handleHpChange(tokenDoc) {
+    if (!this.isWriter() || !tokenDoc?.actor || this.#hpChecks.has(tokenDoc.id)) return;
+    const state = this.store.getState(tokenDoc);
+    if (!state) return;
+    this.#hpChecks.add(tokenDoc.id);
+    try {
+      const next = hpStage(tokenDoc.actor.system?.attributes?.hp);
+      const prev = tokenDoc.getFlag(MODULE_ID, 'hpStage') ?? 'ok';
+      if (next !== prev) await tokenDoc.setFlag(MODULE_ID, 'hpStage', next);
+      await this.ui.refreshTracker?.(tokenDoc);
+      if (!stageWorsened(prev, next) || state.status === STATUS.DISABLED) return;
+      if (await this.ui.confirmHpDisable(tokenDoc, next)) await this.disableAll(tokenDoc);
+    } finally {
+      this.#hpChecks.delete(tokenDoc.id);
+    }
   }
 
   async overridePip(tokenDoc, instanceKey, disableId) {

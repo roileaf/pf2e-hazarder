@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.9 (prerelease)
+
+- **Run a hazard without an encounter:** two GM buttons on a hazard token's HUD. "Trigger" sets the hazard off and posts its reaction, with the abilities it names and its Strike prompt; for a simple trap that is the whole hazard. "Post the disable tracker" puts the tracker in chat while the hazard stays armed, so the party can try to disable it first.
+- **Damage, broken and destroyed:** the GM's tracker shows the hazard's current hit points and follows damage and repairs. When damage takes a tracked hazard to its Broken Threshold, or to 0 HP, the GM is asked whether that disables it.
+- **Mark a part destroyed:** each part on the GM's tracker has a toggle to mark it destroyed or disabled outright, or to put it back, without clicking success pips.
+- **The sheet's key info on the cards (GM only):** the hazard's turn card and the GM's view of the disable tracker now show its defenses in one line (AC, saves, Hardness, HP and Broken Threshold) with immunities, weaknesses and resistances, and a "Details" fold with its level and traits, Stealth, description, the full disable text and the reset. The turn card shows current hit points once the hazard is damaged.
+
 ## 0.1.8 (prerelease)
 
 - **The reaction's Strike, aimed and rolled:** when a posted reaction calls for a Strike ("…makes a spear Strike against the triggering creature"), the GM is asked who it targets and the Strike is rolled against that creature. The list offers the GM's current target first, then player characters, then others in the fight. Choosing "Later", or having the hazard on a scene the GM isn't viewing, posts a GM-only card with the Strike's attack, damage and critical buttons instead.

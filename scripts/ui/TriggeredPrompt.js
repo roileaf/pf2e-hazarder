@@ -206,3 +206,19 @@ export async function offerTriggerReaction(tokenDoc, plan, { ask = true } = {}) 
   await postReaction(tokenDoc, item);
   return true;
 }
+
+/** Damage took the hazard to its Broken Threshold or to 0 HP: does that disable it? */
+export async function confirmHpDisable(tokenDoc, stage) {
+  const hp = tokenDoc.actor?.system?.attributes?.hp ?? {};
+  const data = {
+    name: foundry.utils.escapeHTML(tokenDoc.name),
+    hp: hp.value ?? 0,
+    threshold: hp.brokenThreshold ?? Math.floor((hp.max ?? 0) / 2),
+  };
+  const key = stage === 'destroyed' ? 'Destroyed' : 'Broken';
+  return !!(await foundry.applications.api.DialogV2.confirm({
+    window: { title: game.i18n.format(`PF2E_HAZARDER.Hp.${key}Title`, { name: tokenDoc.name }) },
+    content: `<p>${game.i18n.format(`PF2E_HAZARDER.Hp.${key}Body`, data)}</p>`,
+    yes: { label: game.i18n.localize('PF2E_HAZARDER.Hp.Disable') },
+  }));
+}
