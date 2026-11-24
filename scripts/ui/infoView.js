@@ -83,7 +83,14 @@ export function buildInfoView(
     { label: t('Reset'), html: resetHtml },
   ].filter((s) => String(s.html ?? '').trim());
 
+  // What still shows with the block folded: the two numbers a GM is asked for most.
+  const brief = [a.ac?.value ? `${t('AC')} ${a.ac.value}` : null]
+    .concat(a.hp?.max ? `${t('HP')} ${defenses.find((d) => d.label === t('HP')).value}` : null)
+    .filter(Boolean)
+    .join(' · ');
+
   return {
+    brief: brief || null,
     defenses,
     iwr,
     meta: meta || null,

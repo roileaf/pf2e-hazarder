@@ -308,10 +308,7 @@
    immunities and the like, then the sheet's prose behind a fold.
    It carries .hz-gm so players never see it; undo that class's button-row layout. */
 .hazarder-card .hz-sheet.hz-gm {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 0;
+  display: block;
   padding: 0;
   border: 1px solid var(--hz-line);
   border-radius: var(--hz-radius);
@@ -320,7 +317,47 @@
   line-height: 1.35;
 }
 
-.hazarder-card .hz-sheet > * + * {
+.hazarder-card .hz-sheet-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--font-size-11, 11px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  list-style: none;
+}
+
+.hazarder-card .hz-sheet-head::-webkit-details-marker {
+  display: none;
+}
+
+.hazarder-card .hz-sheet-head::before {
+  content: '▸';
+  opacity: 0.6;
+}
+
+.hazarder-card .hz-sheet[open] > .hz-sheet-head::before {
+  content: '▾';
+}
+
+/* Folded, the head still gives AC and hit points */
+.hazarder-card .hz-sheet-brief {
+  margin-left: auto;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.8;
+}
+
+.hazarder-card .hz-sheet[open] .hz-sheet-brief {
+  display: none;
+}
+
+.hazarder-card .hz-sheet-body > *,
+.hazarder-card .hz-sheet-body > * + * {
   border-top: 1px solid var(--hz-line);
 }
 
@@ -1015,9 +1052,16 @@ button.hazarder-card:disabled {
   color: var(--hz-amber);
 }
 
-.hazarder-card .hz-option .hz-post {
+/* It carries .hz-gm (GM only): undo that class's toolbar padding and alignment */
+.hazarder-card .hz-option .hz-post.hz-gm {
+  display: inline-grid;
+  place-items: center;
+  place-content: center;
+  gap: 0;
   width: 26px;
   height: 26px;
+  padding: 0;
+  border: 1px solid var(--hz-line);
 }
 
 /* Remaining hazard actions in combat trackers (core + PF2e HUD): own line under the name */
@@ -1062,4 +1106,121 @@ li.combatant:has(.hz-ct-pool) {
 
 .hz-ct-pool .hz-ct-pip.clickable:hover {
   transform: scale(1.25);
+}
+
+/* A reaction's trigger, under its name */
+.hazarder-card .hz-trigger {
+  display: block;
+  font-size: var(--font-size-12, 12px);
+  font-weight: 400;
+  color: var(--hz-muted);
+}
+
+/* Turn card: what the hazard has rolled this turn, and what each roll is owed next */
+.hazarder-card .hz-turnlog {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hazarder-card .hz-turnlog[hidden] {
+  display: none;
+}
+
+.hazarder-card .hz-log-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--hz-line);
+  border-left: 3px solid var(--hz-muted);
+  border-radius: var(--hz-radius);
+  background: var(--hz-soft);
+  font-size: var(--font-size-12, 12px);
+}
+
+.hazarder-card .hz-log-what {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hazarder-card .hz-log-what > i:first-child,
+.hazarder-card .hz-log-arrow {
+  color: var(--hz-muted);
+}
+
+.hazarder-card .hz-log-arrow {
+  font-size: 0.8em;
+}
+
+.hazarder-card .hz-log-outcome {
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hazarder-card .hz-log-row.hz-outcome-success,
+.hazarder-card .hz-log-row.hz-outcome-criticalSuccess {
+  border-left-color: var(--hz-triggered);
+}
+
+/* A save made against the hazard: success is the creature's, so the colours flip */
+.hazarder-card .hz-log-save.hz-outcome-success,
+.hazarder-card .hz-log-save.hz-outcome-criticalSuccess {
+  border-left-color: var(--hz-disabled);
+}
+
+.hazarder-card .hz-log-save.hz-outcome-failure,
+.hazarder-card .hz-log-save.hz-outcome-criticalFailure {
+  border-left-color: var(--hz-triggered);
+}
+
+/* A hit still owed its damage */
+.hazarder-card .hz-log-row.hz-log-owed {
+  border-color: var(--hz-amber);
+  background: color-mix(in srgb, var(--hz-amber) 14%, transparent);
+}
+
+.hazarder-card .hz-chip.hz-owed {
+  border-color: var(--hz-amber);
+  background: var(--hz-amber);
+  color: var(--hz-on-accent);
+}
+
+.hazarder-card .hz-log-done {
+  color: var(--hz-disabled);
+}
+
+.hazarder-card .hz-log-follow {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--hz-muted);
+}
+
+/* Turn card: what the routine says happens when the turn ends */
+.hazarder-card .hz-endturn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 5px 8px;
+  border-left: 3px solid var(--hz-amber);
+  border-radius: var(--hz-radius);
+  background: var(--hz-soft);
+  font-size: var(--font-size-12, 12px);
+}
+
+.hazarder-card .hz-endturn-label {
+  flex: 1 0 100%;
+  font-size: var(--font-size-10, 10px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--hz-muted);
 }

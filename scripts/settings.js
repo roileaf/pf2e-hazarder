@@ -39,6 +39,19 @@ export function registerSettings() {
     hint: 'PF2E_HAZARDER.Settings.EnforceProficiency.Hint',
     default: true,
   });
+  game.settings.register(MODULE_ID, 'endOfTurnAbilities', {
+    ...common,
+    name: 'PF2E_HAZARDER.Settings.EndOfTurnAbilities.Name',
+    hint: 'PF2E_HAZARDER.Settings.EndOfTurnAbilities.Hint',
+    default: true,
+  });
+  // Whether the GM keeps the stat block on hazard cards unfolded.
+  game.settings.register(MODULE_ID, 'statsOpen', {
+    scope: 'client',
+    config: false,
+    type: Boolean,
+    default: true,
+  });
   game.settings.register(MODULE_ID, 'debug', {
     scope: 'client',
     config: true,

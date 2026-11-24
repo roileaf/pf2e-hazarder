@@ -2,6 +2,7 @@ import {
   isHazardTurn,
   shouldPromptForPlan,
   shouldSkipTurn,
+  turnAdvanced,
   trackerNeedsBump,
 } from '../../scripts/hooks/predicates.js';
 
@@ -104,4 +105,14 @@ describe('trackerNeedsBump', () => {
     expect(trackerNeedsBump({ messageIds: ids, trackerId: 'm1', status: 'armed' })).toBe(false);
     expect(trackerNeedsBump({ messageIds: ids, trackerId: 'm1', status: undefined })).toBe(false);
   });
+});
+
+test('turnAdvanced: only a step forward counts', () => {
+  expect(turnAdvanced({ round: 1, turn: 2 }, { round: 1, turn: 3 })).toBe(true);
+  expect(turnAdvanced({ round: 1, turn: 4 }, { round: 2, turn: 0 })).toBe(true);
+  expect(turnAdvanced({ round: 2, turn: 0 }, { round: 1, turn: 4 })).toBe(false);
+  expect(turnAdvanced({ round: 1, turn: 3 }, { round: 1, turn: 2 })).toBe(false);
+  expect(turnAdvanced({ round: 1, turn: 3 }, { round: 1, turn: 3 })).toBe(false);
+  expect(turnAdvanced({ round: null, turn: null }, { round: 1, turn: 0 })).toBe(false);
+  expect(turnAdvanced(undefined, { round: 1, turn: 0 })).toBe(false);
 });

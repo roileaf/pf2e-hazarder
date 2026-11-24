@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.10 (prerelease)
+
+- **Aim a hazard's Strike:** a Strike button on the turn card (or the reaction's Strike card) first asks who it is aimed at, listing creatures the hazard has not attacked this turn first. A target you picked by hand is kept and nothing is asked.
+- **The turn card follows the turn:** each Strike the hazard rolls is listed on its turn card with its target and outcome. A hit shows a "Roll damage" or "Roll critical damage" button aimed at that creature, ticked off once rolled, with the abilities the Strike brings (attack effects, abilities its text names) one click away. Saves made against the hazard are listed with their outcome.
+- **End-of-turn abilities are used for you:** when a hazard's turn ends and its routine says it does something then, that ability is posted to chat, a reaction with the abilities it names and the Strike it calls for. One you already posted during the turn is not posted again. World setting, on by default.
+- **End-of-turn reminder:** what the routine says happens when the turn ends ("At the end of its turn, it takes its Spectral Uprising reaction") is called out at the bottom of the turn card, with a button for each ability it names.
+- **The stat block on the GM's cards folds:** click its "Stats" head to fold it down to AC and hit points. It stays the way you left it, on every card.
+- **Players no longer see how many successes a hazard needs:** on the disable tracker they see a pip for each success earned, and "2 successes so far" for options that share a total. The GM still sees every pip and the totals.
+- **Players no longer see how many actions a hazard has:** the action glyphs on the disable tracker and beside the hazard's name in the combat tracker are for the GM only.
+- **The tracker follows the rolls:** when a disable check counts, the tracker is reposted at the bottom of the chat with the new progress instead of being updated further up, behind the roll.
+- **Reactions show their trigger** under their name on the turn card.
+
 ## 0.1.9 (prerelease)
 
 - **Run a hazard without an encounter:** two GM buttons on a hazard token's HUD. "Trigger" sets the hazard off and posts its reaction, with the abilities it names and its Strike prompt; for a simple trap that is the whole hazard. "Post the disable tracker" puts the tracker in chat while the hazard stays armed, so the party can try to disable it first.

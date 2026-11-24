@@ -62,7 +62,7 @@ test('unique match applies, marks message, refreshes tracker', async () => {
   expect(tokenDoc.state.instances[0].disabled).toBe(true);
   expect(tokenDoc.state.status).toBe('disabled');
   expect(m.setFlag).toHaveBeenCalledWith('pf2e-hazarder', 'applied', true);
-  expect(ui.upsertTracker).toHaveBeenCalledWith(tokenDoc);
+  expect(ui.upsertTracker).toHaveBeenCalledWith(tokenDoc, { bump: true });
   expect(ui.notify).toHaveBeenCalled();
 });
 
@@ -466,7 +466,7 @@ describe('running a hazard by hand', () => {
     tokenDoc.state = createInitialState(plan);
     await runner.showTracker(tokenDoc);
     expect(tokenDoc.state.status).toBe('armed');
-    expect(ui.upsertTracker).toHaveBeenCalledWith(tokenDoc);
+    expect(ui.upsertTracker).toHaveBeenCalledWith(tokenDoc, { bump: true });
   });
 
   test('trigger sets it off and posts the reaction without asking, even when set to "never"', async () => {

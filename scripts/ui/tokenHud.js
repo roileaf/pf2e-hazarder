@@ -29,7 +29,10 @@ export function decorateTokenHud(runner, hud, html) {
         return;
       }
       const run = action === 'trigger' ? runner.trigger(tokenDoc) : runner.showTracker(tokenDoc);
-      Promise.resolve(run).catch((err) => console.error('pf2e-hazarder |', err));
+      Promise.resolve(run)
+        // The tracker may be off screen in a scrolled-up log: go to it.
+        .then(() => ui.chat?.scrollBottom?.())
+        .catch((err) => console.error('pf2e-hazarder |', err));
     });
     column.append(button);
   }

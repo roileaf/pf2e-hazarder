@@ -32,3 +32,10 @@ export function trackerNeedsBump({ messageIds, trackerId, status }) {
   if (!trackerId) return true;
   return !messageIds.slice(-BUMP_WINDOW).includes(trackerId);
 }
+
+/** Did the encounter move on to a later turn? False for a rewind, a reload, or combat start. */
+export function turnAdvanced(prior, current) {
+  if (prior?.round == null || prior?.turn == null || current?.round == null) return false;
+  if (current.round !== prior.round) return current.round > prior.round;
+  return (current.turn ?? 0) > prior.turn;
+}

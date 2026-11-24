@@ -29,3 +29,80 @@ export function decorateTurnCard(root, { spent = 0, collapsed = false } = {}) {
     });
   }
 }
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function chip(className, action, data, label, icon) {
+  const button = el('button', `hz-chip ${className}`.trim());
+  button.type = 'button';
+  button.dataset.hzAction = action;
+  for (const [key, value] of Object.entries(data)) if (value != null) button.dataset[key] = value;
+  if (icon) button.append(el('i', icon), ' ');
+  button.append(label);
+  return button;
+}
+
+/**
+ * Fill the turn card's log with what the hazard has rolled this turn (`turnLogRows`): one row per
+ * Strike (target, outcome, the damage roll it is owed, what a hit brings with it) and per save
+ * made against it. Like the spent actions, it is drawn at render time, never stored in the card.
+ */
+export function decorateTurnLog(root, rows = []) {
+  const card = root.querySelector('.hazarder-card.hz-turn');
+  if (!card) return;
+  let log = card.querySelector('.hz-turnlog');
+  if (!log) {
+    // A card posted before the log existed: it goes under the Strikes.
+    log = el('div', 'hz-turnlog');
+    const strikes = card.querySelectorAll('.hz-strike');
+    if (strikes.length) strikes[strikes.length - 1].after(log);
+    else (card.querySelector('.hz-body') ?? card).append(log);
+  }
+  log.replaceChildren();
+  log.hidden = !rows.length;
+  const t = (key) => game.i18n.localize(`PF2E_HAZARDER.Turn.${key}`);
+  for (const row of rows) {
+    const line = el('div', 'hz-log-row');
+    if (row.outcome) line.classList.add(`hz-outcome-${row.outcome}`);
+    if (row.save) line.classList.add('hz-log-save');
+    if (row.owed) line.classList.add('hz-log-owed');
+    const what = el('span', 'hz-log-what');
+    what.append(
+      el('i', row.save ? 'fa-solid fa-shield-halved' : 'fa-solid fa-hand-fist'),
+      ' ',
+      el('strong', null, row.name),
+    );
+    if (row.what) what.append(` ${row.what}`);
+    if (row.target)
+      what.append(' ', el('i', 'fa-solid fa-arrow-right hz-log-arrow'), ` ${row.target}`);
+    line.append(what);
+    if (row.outcomeLabel) line.append(el('span', 'hz-log-outcome', row.outcomeLabel));
+    if (row.owed) {
+      line.append(
+        chip(
+          'hz-owed',
+          'log-damage',
+          { itemId: row.itemId, targetUuid: row.targetUuid, critical: row.critical ? '1' : null },
+          t(row.critical ? 'RollCritical' : 'RollDamage'),
+          'fa-solid fa-burst',
+        ),
+      );
+    }
+    if (row.done) {
+      const check = el('i', 'fa-solid fa-check hz-log-done');
+      check.dataset.tooltip = t('DamageRolled');
+      line.append(check);
+    }
+    if (row.followUps?.length) {
+      const follow = el('span', 'hz-log-follow', `${t('Then')} `);
+      for (const f of row.followUps) follow.append(chip('', 'item', { itemId: f.id }, f.name));
+      line.append(follow);
+    }
+    log.append(line);
+  }
+}

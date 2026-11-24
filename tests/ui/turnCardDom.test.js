@@ -1,4 +1,4 @@
-import { decorateTurnCard, nextSpent } from '../../scripts/ui/turnCardDom.js';
+import { decorateTurnCard, decorateTurnLog, nextSpent } from '../../scripts/ui/turnCardDom.js';
 
 describe('nextSpent', () => {
   test('clicking a diamond spends up to and including it', () => {
@@ -77,4 +77,66 @@ test('a cost larger than what is left locks; affordable ones stay open', () => {
   const disabled = cardWithButtons(2);
   expect(disabled('.atk')).toBe(false);
   expect(disabled('.two')).toBe(true);
+});
+
+describe('decorateTurnLog', () => {
+  const card = () => {
+    document.body.innerHTML =
+      '<div class="hazarder-card hz-turn"><div class="hz-turnlog" hidden></div></div>';
+    return document.body;
+  };
+
+  test('a hit is owed its damage; a settled hit is ticked; a miss just reads', () => {
+    const root = card();
+    decorateTurnLog(root, [
+      { name: 'Blade', target: 'Harlan', outcome: 'failure', outcomeLabel: 'Miss' },
+      {
+        name: 'Blade',
+        target: 'Mara',
+        outcome: 'criticalSuccess',
+        outcomeLabel: 'Critical hit',
+        owed: true,
+        critical: true,
+        itemId: 'blade',
+        targetUuid: 'Scene.s.Token.mara',
+        followUps: [{ id: 'grab', name: 'Grab' }],
+      },
+      { name: 'Blade', target: 'Ewan', outcome: 'success', outcomeLabel: 'Hit', done: true },
+    ]);
+    const log = root.querySelector('.hz-turnlog');
+    expect(log.hidden).toBe(false);
+    const rows = [...log.querySelectorAll('.hz-log-row')];
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('Harlan');
+    expect(rows[0].querySelector('button')).toBeNull();
+    const owed = rows[1].querySelector('[data-hz-action="log-damage"]');
+    expect(owed.dataset).toMatchObject({
+      itemId: 'blade',
+      targetUuid: 'Scene.s.Token.mara',
+      critical: '1',
+    });
+    expect(rows[1].classList.contains('hz-log-owed')).toBe(true);
+    expect(rows[1].querySelector('[data-hz-action="item"]').dataset.itemId).toBe('grab');
+    expect(rows[2].querySelector('.hz-log-done')).not.toBeNull();
+    expect(rows[2].querySelector('button')).toBeNull();
+  });
+
+  test('saves are listed; drawing again replaces the rows; no rows hides the log', () => {
+    const root = card();
+    decorateTurnLog(root, [
+      {
+        save: true,
+        name: 'Harlan',
+        what: 'Reflex DC 28',
+        outcome: 'failure',
+        outcomeLabel: 'Failure',
+      },
+    ]);
+    const log = root.querySelector('.hz-turnlog');
+    expect(log.querySelector('.hz-log-save').textContent).toContain('Reflex DC 28');
+    decorateTurnLog(root, []);
+    expect(log.children).toHaveLength(0);
+    expect(log.hidden).toBe(true);
+    expect(() => decorateTurnLog(document.createElement('div'), [])).not.toThrow();
+  });
 });

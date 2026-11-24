@@ -129,7 +129,8 @@ export class HazardRunner {
       }
       await this.store.setState(tokenDoc, next);
       await this.#afterEvents(tokenDoc, events);
-      await this.ui.upsertTracker(tokenDoc);
+      // A roll just pushed the tracker up the log: bring it back down with the new progress.
+      await this.ui.upsertTracker(tokenDoc, { bump: true });
       return { events, plan };
     });
     if (events.some((e) => e.type === 'hazardTriggered')) this.#promptTriggered(tokenDoc, plan);
@@ -274,7 +275,8 @@ export class HazardRunner {
     return this.#enqueue(tokenDoc, async () => {
       const { plan } = this.store.getOrDraftPlan(tokenDoc.actor);
       await this.store.setState(tokenDoc, this.store.getOrCreateState(tokenDoc, plan));
-      await this.ui.upsertTracker(tokenDoc);
+      // Asked for by hand: one already in chat is brought down to where the GM is looking.
+      await this.ui.upsertTracker(tokenDoc, { bump: true });
     });
   }
 

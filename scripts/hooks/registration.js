@@ -1,6 +1,7 @@
 import { MODULE_ID, OUTCOME_TO_DEGREE, STATUS } from '../constants.js';
 import { extractCheck, matchCheck } from '../services/RollMatcher.js';
 import { CHECK_TYPES, rankFromMessage } from '../services/HazardRunner.js';
+import { attackedTokenIds } from '../services/turnLog.js';
 import { getSystemFlags } from '../systemCompat.js';
 import {
   baseActor,
@@ -15,12 +16,18 @@ import {
   currentHazardPool,
   findStrike,
   postSaveRequest,
+  currentTurnCard,
+  postEndOfTurn,
   postTurnCard,
   spendFromMessage,
+  turnLogFor,
+  turnLogRows,
 } from '../ui/TurnCard.js';
+import { aimAt, aimStrike } from '../ui/TriggeredPrompt.js';
 import { decorateCombatTracker } from '../ui/combatTrackerPool.js';
 import { decorateTokenHud } from '../ui/tokenHud.js';
-import { decorateTurnCard, nextSpent } from '../ui/turnCardDom.js';
+import { hideTrackerSecrets } from '../ui/trackerDom.js';
+import { decorateTurnCard, decorateTurnLog, nextSpent } from '../ui/turnCardDom.js';
 import { extractSaves } from '../ui/routineParts.js';
 import { buildCheckRequest } from '../ui/checkRequest.js';
 import {
@@ -28,6 +35,7 @@ import {
   shouldPromptForPlan,
   shouldSkipTurn,
   trackerNeedsBump,
+  turnAdvanced,
 } from './predicates.js';
 
 async function confirmReview(actor) {
@@ -153,8 +161,21 @@ async function onCardClick(runner, event) {
   if (action === 'strike' || action === 'strike-damage' || action === 'strike-critical') {
     const strike = findStrike(tokenDoc.actor, el.dataset.itemId);
     if (!strike) return;
-    if (action === 'strike') return strike.variants?.[Number(el.dataset.variant)]?.roll({ event });
+    if (action === 'strike') {
+      // Aim first: the outcome, and the damage that follows, need a target.
+      const attacked = attackedTokenIds(turnLogFor(tokenDoc));
+      if (!(await aimStrike(tokenDoc, strike.item?.name ?? '', { attacked }))) return;
+      return strike.variants?.[Number(el.dataset.variant)]?.roll({ event });
+    }
     return action === 'strike-damage' ? strike.damage?.({ event }) : strike.critical?.({ event });
+  }
+  if (action === 'log-damage') {
+    // Damage for a Strike in the turn card's log, at the creature that Strike hit.
+    const strike = findStrike(tokenDoc.actor, el.dataset.itemId);
+    if (!strike) return;
+    const target = el.dataset.targetUuid ? await fromUuid(el.dataset.targetUuid) : null;
+    if (target?.object) aimAt(target.object);
+    return el.dataset.critical ? strike.critical?.({ event }) : strike.damage?.({ event });
   }
   if (!game.user.isGM) return;
   if (action === 'hazard-sheet') return tokenDoc.actor?.sheet.render(true);
@@ -173,7 +194,12 @@ async function onCardClick(runner, event) {
     ui.notifications.warn(game.i18n.localize('PF2E_HAZARDER.Errors.NotActiveGM'));
     return;
   }
-  if (action === 'tracker') return repostTracker(runner, tokenDoc);
+  if (action === 'tracker') {
+    await repostTracker(runner, tokenDoc);
+    // The log may be scrolled up: go to where the tracker now is.
+    ui.chat?.scrollBottom?.();
+    return;
+  }
   if (action === 'pip')
     return runner.overridePip(tokenDoc, el.dataset.instanceKey, el.dataset.disableId);
   if (action === 'toggle-disabled') return runner.toggleDisabled(tokenDoc, el.dataset.instanceKey);
@@ -217,6 +243,20 @@ async function bumpTrackers(runner, combat) {
   }
 }
 
+/** A hazard's turn just passed: what its routine does "at the end of its turn" is used now. */
+async function endHazardTurn(combat, prior, current) {
+  if (!game.settings.get(MODULE_ID, 'endOfTurnAbilities') || !turnAdvanced(prior, current)) return;
+  const ended = combat.combatants.get(prior.combatantId ?? '');
+  const token = ended?.token;
+  if (ended?.actor?.type !== 'hazard' || !token) return;
+  if (getState(token)?.status === STATUS.DISABLED) return;
+  try {
+    await postEndOfTurn(token, prior);
+  } catch (err) {
+    console.error(`${MODULE_ID} |`, err);
+  }
+}
+
 export function registerHooks(runner) {
   Hooks.on('createCombatant', async (combatant) => {
     if (!runner.isWriter() || combatant.actor?.type !== 'hazard' || !combatant.token) return;
@@ -240,6 +280,7 @@ export function registerHooks(runner) {
 
   Hooks.on('combatTurnChange', async (combat, prior, current) => {
     if (!runner.isWriter()) return;
+    await endHazardTurn(combat, prior, current);
     if (!isHazardTurn(combat)) {
       await bumpTrackers(runner, combat);
       return;
@@ -260,7 +301,8 @@ export function registerHooks(runner) {
   // Remaining hazard actions next to the hazard's name in the core tracker and PF2e HUD's tracker.
   // GMs can click the glyphs to spend/refund actions, same as on the turn card.
   const decorate = (root) => {
-    const pool = currentHazardPool();
+    // The GM's to know: players get no action count beside the hazard's name either.
+    const pool = game.user.isGM ? currentHazardPool() : null;
     const message = pool?.messageId ? game.messages.get(pool.messageId) : null;
     const onSpend =
       game.user.isGM && message
@@ -293,9 +335,25 @@ export function registerHooks(runner) {
     if (byGM ? message.isAuthor : runner.isWriter()) spendFromMessage(message);
   });
 
+  // The acting hazard's turn card lists its rolls: redraw it (locally, nothing is saved) when a
+  // roll is posted or removed.
+  const redrawTurnCard = foundry.utils.debounce(() => {
+    const token = game.combat?.started ? game.combat.combatant?.token : null;
+    const card = token?.actor?.type === 'hazard' ? currentTurnCard(token) : null;
+    if (card) ui.chat?.updateMessage?.(card);
+  }, 100);
+  Hooks.on('createChatMessage', (message) => {
+    if (game.user.isGM && message.flags?.[MODULE_ID]?.kind !== 'turn') redrawTurnCard();
+  });
+  Hooks.on('deleteChatMessage', () => {
+    if (game.user.isGM) redrawTurnCard();
+  });
+
   Hooks.on('renderChatMessageHTML', (message, html) => {
     if (!game.user.isGM) {
       html.querySelectorAll('.hz-gm, .hz-gm-row').forEach((el) => el.remove());
+      // How many successes a hazard needs, and how many actions it has, are the GM's to know.
+      hideTrackerSecrets(html);
       // Respect pf2e's "show DCs to players" metagame setting (tracker content is rendered by the GM).
       if (game.pf2e?.settings?.metagame?.dcs === false) {
         html.querySelectorAll('.hz-dc').forEach((el) => el.remove());
@@ -306,9 +364,24 @@ export function registerHooks(runner) {
         spent: message.getFlag(MODULE_ID, 'spent'),
         collapsed: message.getFlag(MODULE_ID, 'collapsed'),
       });
+      // The card of the turn being taken also lists what the hazard has rolled so far.
+      const uuid = html.querySelector('.hz-turn[data-token-uuid]')?.dataset.tokenUuid;
+      const tokenDoc = game.user.isGM && uuid ? fromUuidSync(uuid) : null;
+      if (tokenDoc?.actor && currentTurnCard(tokenDoc)?.id === message.id) {
+        decorateTurnLog(html, turnLogRows(tokenDoc));
+      }
     }
     if (html.querySelector('.hazarder-card')) {
       html.addEventListener('click', (event) => onCardClick(runner, event));
+    }
+    // The stat block folds, and stays the way this GM last left it.
+    for (const stats of html.querySelectorAll('details.hz-sheet')) {
+      stats.open = game.settings.get(MODULE_ID, 'statsOpen');
+      stats.addEventListener('toggle', () => {
+        if (game.settings.get(MODULE_ID, 'statsOpen') !== stats.open) {
+          game.settings.set(MODULE_ID, 'statsOpen', stats.open);
+        }
+      });
     }
     if (runner.isWriter()) {
       bindCandidatePicker(runner, message, html);

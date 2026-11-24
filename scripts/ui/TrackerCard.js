@@ -32,13 +32,20 @@ export async function refreshTracker(tokenDoc) {
   return existing;
 }
 
-export async function upsertTracker(tokenDoc) {
+/**
+ * Show the hazard's current progress on its tracker, posting one if it has none. With `bump`, a
+ * tracker that is no longer the last message is replaced by a fresh one at the bottom of the log
+ * rather than updated where it sits, out of sight.
+ */
+export async function upsertTracker(tokenDoc, { bump = false } = {}) {
   const content = await renderTrackerContent(tokenDoc);
   const existing = game.messages.get(getTrackerMessageId(tokenDoc) ?? '');
-  if (existing) {
+  const buried = bump && existing && game.messages.contents.at(-1)?.id !== existing.id;
+  if (existing && !buried) {
     await existing.update({ content });
     return existing;
   }
+  if (buried) await existing.delete();
   const msg = await ChatMessage.create({
     content,
     speaker: ChatMessage.getSpeaker({ token: tokenDoc }),

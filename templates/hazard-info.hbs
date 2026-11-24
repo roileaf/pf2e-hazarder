@@ -1,4 +1,6 @@
-<div class="hz-sheet hz-gm">
+<details class="hz-sheet hz-gm" open>
+  <summary class="hz-sheet-head"><span>{{localize "PF2E_HAZARDER.Info.Stats"}}</span>{{#if brief}}<span class="hz-sheet-brief">{{brief}}</span>{{/if}}</summary>
+  <div class="hz-sheet-body">
   {{#if defenses.length}}
     <div class="hz-defenses">
       {{#each defenses}}<span class="hz-def"><span class="hz-def-label">{{label}}</span><span class="hz-def-value">{{value}}</span></span>{{/each}}
@@ -17,4 +19,5 @@
       {{#each sections}}<div class="hz-detail"><span class="hz-iwr-label">{{label}}</span> {{{html}}}</div>{{/each}}
     </details>
   {{/if}}
-</div>
+  </div>
+</details>

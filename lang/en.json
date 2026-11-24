@@ -27,6 +27,10 @@
         "Ask": "Ask the GM",
         "Always": "Always post it",
         "Never": "Never"
+      },
+      "EndOfTurnAbilities": {
+        "Name": "Use end-of-turn abilities automatically",
+        "Hint": "When a hazard's turn ends and its routine says it does something then (\"At the end of its turn, it takes its … reaction\"), post that ability to chat, with the abilities and the Strike it calls for. Skipped for an ability you already posted during the turn."
       }
     },
     "Status": {
@@ -51,7 +55,9 @@
       "RankTooLow": "{actor} needs {rank} proficiency in {skill}; the check does not count.",
       "GroupTotal": "{have} / {need} successes between {skills}",
       "MarkDestroyed": "Mark as destroyed or disabled",
-      "Restore": "Restore (not disabled)"
+      "Restore": "Restore (not disabled)",
+      "SoFar": "{have} successes so far, any combination",
+      "GroupSoFar": "{have} successes so far between {skills}"
     },
     "Turn": {
       "Title": "{name}'s turn",
@@ -70,7 +76,28 @@
       "ShowTracker": "Show disable tracker",
       "OpenSheet": "Open hazard sheet",
       "ActionsLeft": "{left} / {total} actions left",
-      "Passive": "Passive ability (costs no actions)"
+      "Passive": "Passive ability (costs no actions)",
+      "EndOfTurn": "End of turn",
+      "RollDamage": "Roll damage",
+      "RollCritical": "Roll critical damage",
+      "DamageRolled": "Damage rolled",
+      "Then": "Then:",
+      "AimTitle": "{strike}: target",
+      "AlreadyAttacked": "attacked this turn",
+      "Outcome": {
+        "Attack": {
+          "criticalSuccess": "Critical hit",
+          "success": "Hit",
+          "failure": "Miss",
+          "criticalFailure": "Critical miss"
+        },
+        "Save": {
+          "criticalSuccess": "Critical success",
+          "success": "Success",
+          "failure": "Failure",
+          "criticalFailure": "Critical failure"
+        }
+      }
     },
     "Plan": {
       "Title": "Hazard plan: {name}",
@@ -165,7 +192,8 @@
       "Reset": "Reset",
       "Details": "Details",
       "Level": "Hazard {level}",
-      "HpNotes": "HP notes"
+      "HpNotes": "HP notes",
+      "Stats": "Stats"
     },
     "Hud": {
       "Trigger": "Trigger hazard: post its reaction",

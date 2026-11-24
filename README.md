@@ -11,6 +11,7 @@ Run Pathfinder 2e and Starfinder 2e complex hazards in Foundry VTT v14 — the r
 - **States** — armed, triggered, active, disabled and reset. Critical failures prompt the GM to post the hazard's reaction; disabled hazards can skip their turn or leave combat.
 - **PF2e Toolbelt** — when its Target Helper is active, save requests from the turn card carry the current targets.
 
+- **Guided Strikes** — a Strike from the turn card asks for its target, then the card lists the roll with its outcome and the damage button it is owed; saves against the hazard and the routine's end-of-turn step are listed too.
 - **No sheet needed** — the GM's cards carry the hazard's defenses (AC, saves, Hardness, HP, Broken Threshold, immunities, weaknesses, resistances) and a Details fold with Stealth, description, the full disable text and reset. The tracker follows the hazard's hit points and asks whether it is disabled when it breaks or is destroyed; each part can be marked destroyed by hand.
 - **Outside combat** — a hazard token's HUD has GM buttons to trigger it (posting its reaction) or to post its disable tracker while it stays armed.
 
@@ -31,14 +32,15 @@ Hazard state lives on the token (`flags.pf2e-hazarder.state`): an `updateToken` 
 
 ## Settings
 
-| Setting | Scope | Default |
-|---|---|---|
-| Public hazard turn card — also post a short public card on the hazard's turn | world | off |
-| Skip disabled hazards — advance past a disabled hazard's turn | world | on |
-| Remove disabled hazards from combat — once every component is disabled | world | off |
-| Hazard's reaction when it enters an encounter — ask the GM, always post it, or never | world | ask |
-| Enforce proficiency requirements — "(master)" options need that rank | world | on |
-| Debug logging | client | off |
+| Setting                                                                                                            | Scope  | Default |
+| ------------------------------------------------------------------------------------------------------------------ | ------ | ------- |
+| Public hazard turn card — also post a short public card on the hazard's turn                                       | world  | off     |
+| Skip disabled hazards — advance past a disabled hazard's turn                                                      | world  | on      |
+| Remove disabled hazards from combat — once every component is disabled                                             | world  | off     |
+| Hazard's reaction when it enters an encounter — ask the GM, always post it, or never                               | world  | ask     |
+| Enforce proficiency requirements — "(master)" options need that rank                                               | world  | on      |
+| Use end-of-turn abilities automatically — post what the routine does "at the end of its turn" when the turn passes | world  | on      |
+| Debug logging                                                                                                      | client | off     |
 
 ## Requirements
 

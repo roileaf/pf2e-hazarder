@@ -40,14 +40,13 @@ function buildActions(state, plan) {
 function groupHead(component, disable, progress) {
   const { members, need } = poolOf(component, disable);
   const have = Math.min(need, poolTotal(members, progress));
+  const skills = members.map((m) => skillLabel(m.skill)).join(' / ');
   return {
     have,
     need,
-    text: game.i18n.format('PF2E_HAZARDER.Tracker.GroupTotal', {
-      have,
-      need,
-      skills: members.map((m) => skillLabel(m.skill)).join(' / '),
-    }),
+    text: game.i18n.format('PF2E_HAZARDER.Tracker.GroupTotal', { have, need, skills }),
+    // Players are told what has been earned, not how much is needed.
+    playerText: game.i18n.format('PF2E_HAZARDER.Tracker.GroupSoFar', { have, skills }),
   };
 }
 
@@ -60,6 +59,7 @@ function sharedView(progress, need) {
     have,
     need,
     text: game.i18n.format('PF2E_HAZARDER.Tracker.AnyCombination', { have, need }),
+    playerText: game.i18n.format('PF2E_HAZARDER.Tracker.SoFar', { have }),
   };
 }
 

@@ -77,6 +77,8 @@ export function buildTurnView({
         // Passive abilities and reactions are listed for reference: they never spend actions.
         passive: !!i.passive,
         reaction: !!i.reaction,
+        // What sets a reaction off, shown without unfolding it.
+        trigger: i.trigger ?? null,
         actionCost: /^[1-3]$/.test(String(i.cost ?? '')) ? Number(i.cost) : 0,
         descriptionHtml: i.descriptionHtml ?? null,
         // With no routine text, the actions are the routine: show them expanded.

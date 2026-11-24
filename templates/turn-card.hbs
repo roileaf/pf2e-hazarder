@@ -46,10 +46,11 @@
       </div>
     </div>
   {{/each}}
+  <div class="hz-turnlog" hidden></div>
   {{#each items}}
     <details class="hz-action {{#if passive}}hz-passive{{/if}} {{#if reaction}}hz-reaction{{/if}}" {{#if open}}open{{/if}}>
       <summary class="hz-action-head">
-        <span class="hz-action-name">{{#if cost}}<span class="action-glyph">{{cost}}</span>{{else if passive}}<i class="fa-solid fa-circle-info" data-tooltip="{{localize 'PF2E_HAZARDER.Turn.Passive'}}"></i>{{else}}<i class="fa-solid fa-bolt"></i>{{/if}} {{name}}</span>
+        <span class="hz-action-name">{{#if cost}}<span class="action-glyph">{{cost}}</span>{{else if passive}}<i class="fa-solid fa-circle-info" data-tooltip="{{localize 'PF2E_HAZARDER.Turn.Passive'}}"></i>{{else}}<i class="fa-solid fa-bolt"></i>{{/if}} {{name}}{{#if trigger}}<span class="hz-trigger">{{trigger}}</span>{{/if}}</span>
         <span class="hz-action-tools">
           <button type="button" class="hz-icon-btn" data-cost="{{actionCost}}" data-hz-action="item" data-item-id="{{id}}" data-token-uuid="{{../tokenUuid}}" data-tooltip="{{localize 'PF2E_HAZARDER.Turn.PostAction'}}" aria-label="{{localize 'PF2E_HAZARDER.Turn.PostAction'}}"><i class="fa-solid fa-comment-dots"></i></button>
           <button type="button" class="hz-icon-btn" data-hz-action="item-info" data-item-id="{{id}}" data-token-uuid="{{../tokenUuid}}" data-tooltip="{{localize 'PF2E_HAZARDER.Turn.Details'}}" aria-label="{{localize 'PF2E_HAZARDER.Turn.Details'}}"><i class="fa-solid fa-info"></i></button>
@@ -62,6 +63,13 @@
         </div>
       {{/if}}
     </details>
+  {{/each}}
+  {{#each endNotes}}
+    <div class="hz-endturn">
+      <span class="hz-endturn-label"><i class="fa-solid fa-flag-checkered"></i> {{localize "PF2E_HAZARDER.Turn.EndOfTurn"}}</span>
+      <span class="hz-endturn-text">{{text}}</span>
+      {{#each abilities}}<button type="button" class="hz-chip" data-hz-action="item" data-item-id="{{id}}" data-token-uuid="{{../../tokenUuid}}" data-tooltip="{{localize 'PF2E_HAZARDER.Turn.PostAction'}}"><i class="fa-solid fa-comment-dots"></i> {{name}}</button>{{/each}}
+    </div>
   {{/each}}
   </div>
 </div>

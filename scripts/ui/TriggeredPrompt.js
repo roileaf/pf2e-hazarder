@@ -21,6 +21,29 @@ export function referencedAbilities(actor, item) {
   });
 }
 
+const slugify = (s) =>
+  String(s ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+/**
+ * What a Strike that hits brings with it: its attack effects ("Grab") and the abilities its text
+ * names, as the hazard's own items.
+ */
+export function strikeFollowUps(actor, item) {
+  const slugs = new Set(item?.system?.attackEffects?.value ?? []);
+  const effects = [...(actor?.items ?? [])].filter(
+    (other) =>
+      other.id !== item?.id &&
+      other.type === 'action' &&
+      slugs.has(other.slug ?? slugify(other.name)),
+  );
+  const named = referencedAbilities(actor, item).filter((a) => !effects.includes(a));
+  return [...effects, ...named];
+}
+
 /**
  * The Strikes `item`'s text calls for ("…making a spear Strike against the triggering creature").
  * A named Strike wins; "a Strike" with no name means the hazard's only one.
@@ -91,6 +114,66 @@ export function strikeTargetChoices(tokenDoc) {
     .map(({ id, name }) => ({ id, name }));
 }
 
+// The target Hazarder set last. Still being targeted afterwards makes it a leftover, not a choice.
+let aimedId = null;
+
+/** Make `token` (a canvas token) the user's only target: pf2e reads a roll's target from there. */
+export function aimAt(token) {
+  for (const other of [...(game.user.targets ?? [])]) {
+    if (other.id !== token.id) other.setTarget(false, { releaseOthers: false });
+  }
+  token.setTarget(true, { releaseOthers: true });
+  aimedId = token.id;
+}
+
+/**
+ * Before a hazard's Strike: who is it aimed at? A target the GM picked by hand stands. Otherwise
+ * the GM picks one here; creatures in `attacked` (token ids, already attacked this turn) are
+ * listed last and marked. Resolves to false when the GM backs out, true when the roll may go on.
+ */
+export async function aimStrike(tokenDoc, strikeName, { attacked = new Set() } = {}) {
+  const current = [...(game.user.targets ?? [])];
+  const byHand = current.length && !(current.length === 1 && current[0].id === aimedId);
+  if (byHand) return true;
+  const all = strikeTargetChoices(tokenDoc);
+  if (!all.length) return true;
+  const fresh = all.filter((t) => !attacked.has(t.id));
+  // Start on someone new; if the last target is the only one left unattacked, on them.
+  const leftover = fresh.filter((t) => t.id === aimedId && fresh.length > 1);
+  const choices = [
+    ...fresh.filter((t) => !leftover.includes(t)),
+    ...leftover,
+    ...all.filter((t) => attacked.has(t.id)),
+  ];
+  const esc = foundry.utils.escapeHTML;
+  const mark = game.i18n.localize('PF2E_HAZARDER.Turn.AlreadyAttacked');
+  const options = choices
+    .map(
+      (t) =>
+        `<option value="${esc(t.id)}">${esc(t.name)}${attacked.has(t.id) ? ` — ${mark}` : ''}</option>`,
+    )
+    .join('');
+  const picked = await foundry.applications.api.DialogV2.wait({
+    window: { title: game.i18n.format('PF2E_HAZARDER.Turn.AimTitle', { strike: strikeName }) },
+    content: `<div class="form-group"><label>${game.i18n.localize('PF2E_HAZARDER.Trigger.Target')}</label><select name="target" autofocus>${options}</select></div>`,
+    rejectClose: false,
+    buttons: [
+      {
+        action: 'roll',
+        label: game.i18n.localize('PF2E_HAZARDER.Trigger.RollStrike'),
+        icon: 'fa-solid fa-dice-d20',
+        default: true,
+        callback: (_event, button) => button.form.elements.target.value,
+      },
+      { action: 'cancel', label: game.i18n.localize('Cancel') },
+    ],
+  });
+  const token = picked && picked !== 'cancel' ? canvas.tokens?.get(picked) : null;
+  if (!token) return false;
+  aimAt(token);
+  return true;
+}
+
 /**
  * "…makes a spear Strike against the triggering creature": the GM picks that creature and the
  * Strike is rolled against it. Resolves to false when there is nobody to pick or the GM defers.
@@ -135,11 +218,7 @@ async function rollReactionStrike(tokenDoc, item, strikes) {
   });
   const token = picked?.target ? canvas.tokens?.get(picked.target) : null;
   if (!token) return false;
-  // pf2e reads the attack's target from the user's targets, not from a roll parameter.
-  for (const other of [...(game.user.targets ?? [])]) {
-    other.setTarget(false, { releaseOthers: false });
-  }
-  token.setTarget(true, { releaseOthers: true });
+  aimAt(token);
   const chosen = usable.find((s) => s.id === picked.strike) ?? usable[0];
   await chosen.strike.variants?.[0]?.roll({});
   return true;
@@ -150,7 +229,7 @@ async function rollReactionStrike(tokenDoc, item, strikes) {
  * Strike it calls for. The GM picks the Strike's target and it is rolled; if they defer, or the
  * target can't be picked here, a card with the Strike's buttons is posted to use later.
  */
-async function postReaction(tokenDoc, item) {
+export async function postReaction(tokenDoc, item) {
   const actor = tokenDoc.actor;
   await item.toMessage();
   for (const ability of referencedAbilities(actor, item)) await ability.toMessage();

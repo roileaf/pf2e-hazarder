@@ -1,4 +1,10 @@
-import { extractSaves, splitRoutine } from '../../scripts/ui/routineParts.js';
+import {
+  extractSaves,
+  endOfTurnAbilityIds,
+  endOfTurnNotes,
+  splitRoutine,
+  triggerText,
+} from '../../scripts/ui/routineParts.js';
 
 const faith =
   '<p>(3 actions; divine, enchantment, mental) Ghostly images of chanting dwarves float through the room. A targeted creature must attempt a @Check[will|dc:25|traits:divine,enchantment,mental] save.</p>' +
@@ -67,4 +73,49 @@ describe('extractSaves', () => {
   test('none when there is no save', () => {
     expect(extractSaves('<p>It bites.</p>')).toEqual([]);
   });
+});
+
+test('endOfTurnNotes finds what happens at the end of the turn and the abilities named', () => {
+  const routine =
+    "<p>(3 actions) The violence targets three creatures. At the end of the haunt's turn, it takes its Spectral Uprising reaction.</p>";
+  const items = [
+    { id: 'r1', name: 'Spectral Uprising' },
+    { id: 's1', name: 'Ghostly Attack' },
+  ];
+  expect(endOfTurnNotes(routine, items)).toEqual([
+    {
+      text: "At the end of the haunt's turn, it takes its Spectral Uprising reaction.",
+      abilities: [{ id: 'r1', name: 'Spectral Uprising' }],
+    },
+  ]);
+  expect(endOfTurnNotes('<p>It makes a Strike.</p>', items)).toEqual([]);
+  expect(endOfTurnNotes(null)).toEqual([]);
+});
+
+test("triggerText reads a reaction's trigger", () => {
+  expect(
+    triggerText(
+      '<p><strong>Trigger</strong> A creature enters the room.</p><hr /><p><strong>Effect</strong> The trap fires.</p>',
+    ),
+  ).toBe('A creature enters the room.');
+  expect(triggerText('<p><strong>Trigger</strong> A creature moves</p>')).toBe('A creature moves');
+  expect(triggerText('<p>The trap fires.</p>')).toBeNull();
+});
+
+test('endOfTurnAbilityIds: each named ability once, skipping those already used', () => {
+  const notes = [
+    {
+      text: 'a',
+      abilities: [
+        { id: 'r1', name: 'Uprising' },
+        { id: 'a1', name: 'Wail' },
+      ],
+    },
+    { text: 'b', abilities: [{ id: 'r1', name: 'Uprising' }] },
+    { text: 'c', abilities: [] },
+  ];
+  expect(endOfTurnAbilityIds(notes)).toEqual(['r1', 'a1']);
+  expect(endOfTurnAbilityIds(notes, ['r1'])).toEqual(['a1']);
+  expect(endOfTurnAbilityIds([], ['r1'])).toEqual([]);
+  expect(endOfTurnAbilityIds(null)).toEqual([]);
 });

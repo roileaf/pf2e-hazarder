@@ -86,3 +86,14 @@ test('a hazard with no stat block does not list its zeroed saves', () => {
   expect(v.defenses).toEqual([]);
   expect(v.iwr.map((e) => e.value)).toEqual(['object immunities']);
 });
+
+test('brief: AC and hit points, for the folded block', () => {
+  const actor = {
+    saves: {},
+    system: { attributes: { ac: { value: 27 }, hp: { value: 40, max: 66 } } },
+  };
+  expect(buildInfoView(actor, { liveHp: true }).brief).toBe(
+    'PF2E_HAZARDER.Info.AC 27 · PF2E_HAZARDER.Info.HP 40/66',
+  );
+  expect(buildInfoView({ system: { attributes: {} } }).brief).toBeNull();
+});

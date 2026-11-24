@@ -25,9 +25,9 @@
             {{#if showToggle}}{{#if ../../isGM}}<span class="hz-gm hz-part-tools"><button type="button" class="hz-icon-btn hz-destroy" data-hz-action="toggle-disabled" data-instance-key="{{key}}" data-tooltip="{{#if disabled}}{{localize 'PF2E_HAZARDER.Tracker.Restore'}}{{else}}{{localize 'PF2E_HAZARDER.Tracker.MarkDestroyed'}}{{/if}}" aria-label="{{#if disabled}}{{localize 'PF2E_HAZARDER.Tracker.Restore'}}{{else}}{{localize 'PF2E_HAZARDER.Tracker.MarkDestroyed'}}{{/if}}"><i class="fa-solid {{#if disabled}}fa-rotate-left{{else}}fa-hammer{{/if}}"></i></button></span>{{/if}}{{/if}}
           </div>
           {{/if}}
-          {{#if shared}}<div class="hz-shared" data-tooltip="{{shared.have}} / {{shared.need}}"><i class="fa-solid fa-shuffle"></i> {{shared.text}}</div>{{/if}}
+          {{#if shared}}<div class="hz-shared" data-tooltip="{{shared.have}} / {{shared.need}}" data-player-text="{{shared.playerText}}"><i class="fa-solid fa-shuffle"></i> {{shared.text}}</div>{{/if}}
           {{#each options}}
-            {{#if groupHead}}<div class="hz-shared hz-group-head" data-tooltip="{{groupHead.have}} / {{groupHead.need}}"><i class="fa-solid fa-shuffle"></i> {{groupHead.text}}</div>{{/if}}
+            {{#if groupHead}}<div class="hz-shared hz-group-head" data-tooltip="{{groupHead.have}} / {{groupHead.need}}" data-player-text="{{groupHead.playerText}}"><i class="fa-solid fa-shuffle"></i> {{groupHead.text}}</div>{{/if}}
             <div class="hz-option {{#if grouped}}hz-grouped{{/if}}">
               {{#unless ../disabled}}
                 <button type="button" class="hz-roll" data-hz-action="disable" data-instance-key="{{../key}}" data-disable-id="{{disableId}}">
